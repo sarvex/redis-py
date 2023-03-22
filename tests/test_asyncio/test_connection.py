@@ -44,6 +44,7 @@ async def test_invalid_response(create_redis):
     await r.connection.disconnect()
 
 
+@pytest.mark.onlynoncluster
 async def test_asynckills():
 
     for b in [True, False]:
