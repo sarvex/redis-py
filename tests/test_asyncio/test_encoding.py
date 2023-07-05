@@ -20,21 +20,21 @@ class TestEncoding:
         await redis.flushall()
 
     async def test_simple_encoding(self, r_no_decode: redis.Redis):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         await r_no_decode.set("unicode-string", unicode_string.encode("utf-8"))
         cached_val = await r_no_decode.get("unicode-string")
         assert isinstance(cached_val, bytes)
         assert unicode_string == cached_val.decode("utf-8")
 
     async def test_simple_encoding_and_decoding(self, r: redis.Redis):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         await r.set("unicode-string", unicode_string)
         cached_val = await r.get("unicode-string")
         assert isinstance(cached_val, str)
         assert unicode_string == cached_val
 
     async def test_memoryview_encoding(self, r_no_decode: redis.Redis):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         unicode_string_view = memoryview(unicode_string.encode("utf-8"))
         await r_no_decode.set("unicode-string-memoryview", unicode_string_view)
         cached_val = await r_no_decode.get("unicode-string-memoryview")
@@ -43,7 +43,7 @@ class TestEncoding:
         assert unicode_string == cached_val.decode("utf-8")
 
     async def test_memoryview_encoding_and_decoding(self, r: redis.Redis):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         unicode_string_view = memoryview(unicode_string.encode("utf-8"))
         await r.set("unicode-string-memoryview", unicode_string_view)
         cached_val = await r.get("unicode-string-memoryview")
@@ -51,7 +51,7 @@ class TestEncoding:
         assert unicode_string == cached_val
 
     async def test_list_encoding(self, r: redis.Redis):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         result = [unicode_string, unicode_string, unicode_string]
         await r.rpush("a", *result)
         assert await r.lrange("a", 0, -1) == result

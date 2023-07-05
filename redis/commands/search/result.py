@@ -22,11 +22,11 @@ class Result:
 
         step = 1
         if hascontent:
-            step = step + 1
+            step += 1
         if has_payload:
-            step = step + 1
+            step += 1
         if with_scores:
-            step = step + 1
+            step += 1
 
         offset = 2 if with_scores else 1
 

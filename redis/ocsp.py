@@ -54,17 +54,16 @@ def _check_certificate(issuer_cert, ocsp_bytes, validate=True):
 
     if ocsp_response.response_status == ocsp.OCSPResponseStatus.UNAUTHORIZED:
         raise AuthorizationError("you are not authorized to view this ocsp certificate")
-    if ocsp_response.response_status == ocsp.OCSPResponseStatus.SUCCESSFUL:
-        if ocsp_response.certificate_status != ocsp.OCSPCertStatus.GOOD:
-            raise ConnectionError(
-                f'Received an {str(ocsp_response.certificate_status).split(".")[1]} '
-                "ocsp certificate status"
-            )
-    else:
+    if ocsp_response.response_status != ocsp.OCSPResponseStatus.SUCCESSFUL:
         raise ConnectionError(
             "failed to retrieve a sucessful response from the ocsp responder"
         )
 
+    if ocsp_response.certificate_status != ocsp.OCSPCertStatus.GOOD:
+        raise ConnectionError(
+            f'Received an {str(ocsp_response.certificate_status).split(".")[1]} '
+            "ocsp certificate status"
+        )
     if ocsp_response.this_update >= datetime.datetime.now():
         raise ConnectionError("ocsp certificate was issued in the future")
 
@@ -107,20 +106,20 @@ def _check_certificate(issuer_cert, ocsp_bytes, validate=True):
 
 
 def _get_certificates(certs, issuer_cert, responder_name, responder_hash):
-    if responder_name is None:
-        certificates = [
+    return (
+        [
             c
             for c in certs
-            if _get_pubkey_hash(c) == responder_hash and c.issuer == issuer_cert.subject
+            if _get_pubkey_hash(c) == responder_hash
+            and c.issuer == issuer_cert.subject
         ]
-    else:
-        certificates = [
+        if responder_name is None
+        else [
             c
             for c in certs
             if c.subject == responder_name and c.issuer == issuer_cert.subject
         ]
-
-    return certificates
+    )
 
 
 def _get_pubkey_hash(certificate):
@@ -185,8 +184,7 @@ class OCSPVerifier:
         """Convert SSL certificates in a binary (DER) format to ASCII PEM."""
 
         pem = ssl.DER_cert_to_PEM_cert(der)
-        cert = x509.load_pem_x509_certificate(pem.encode(), backends.default_backend())
-        return cert
+        return x509.load_pem_x509_certificate(pem.encode(), backends.default_backend())
 
     def components_from_socket(self):
         """This function returns the certificate, primary issuer, and primary ocsp
@@ -263,8 +261,7 @@ class OCSPVerifier:
         path = base64.b64encode(
             request.public_bytes(hazmat.primitives.serialization.Encoding.DER)
         )
-        url = urljoin(server, path.decode("ascii"))
-        return url
+        return urljoin(server, path.decode("ascii"))
 
     def check_certificate(self, server, cert, issuer_url):
         """Checks the validitity of an ocsp server for an issuer"""

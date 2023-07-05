@@ -60,10 +60,10 @@ class CommandsParser:
                 # We'll try to reinitialize the commands cache, if the engine
                 # version has changed, the commands may not be current
                 await self.initialize()
-                if cmd_name not in self.commands:
-                    raise RedisError(
-                        f"{cmd_name} command doesn't exist in Redis commands"
-                    )
+            if cmd_name not in self.commands:
+                raise RedisError(
+                    f"{cmd_name} command doesn't exist in Redis commands"
+                )
 
             command = self.commands[cmd_name]
 

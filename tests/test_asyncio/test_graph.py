@@ -250,7 +250,7 @@ async def test_cached_execution(modclient: redis.Redis):
     assert uncached_result.cached_execution is False
 
     # loop to make sure the query is cached on each thread on server
-    for x in range(0, 64):
+    for _ in range(0, 64):
         cached_result = await modclient.graph().query(
             "MATCH (n) RETURN n, $param", {"param": [0]}
         )
@@ -281,11 +281,8 @@ async def test_query_timeout(modclient: redis.Redis):
     # Issue a long-running query with a 1-millisecond timeout.
     with pytest.raises(ResponseError):
         await modclient.graph().query("MATCH (a), (b), (c), (d) RETURN *", timeout=1)
-        assert False is False
-
     with pytest.raises(Exception):
         await modclient.graph().query("RETURN 1", timeout="str")
-        assert False is False
 
 
 @pytest.mark.redismod
@@ -294,7 +291,6 @@ async def test_read_only_query(modclient: redis.Redis):
         # Issue a write query, specifying read-only true,
         # this call should fail.
         await modclient.graph().query("CREATE (p:person {name:'a'})", read_only=True)
-        assert False is False
 
 
 @pytest.mark.redismod

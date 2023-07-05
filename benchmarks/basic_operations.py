@@ -23,8 +23,7 @@ def parse_args():
         default=2,
     )
 
-    args = parser.parse_args()
-    return args
+    return parser.parse_args()
 
 
 def run():
@@ -48,10 +47,7 @@ def timer(func):
         start = time.monotonic()
         ret = func(*args, **kwargs)
         duration = time.monotonic() - start
-        if "num" in kwargs:
-            count = kwargs["num"]
-        else:
-            count = args[1]
+        count = kwargs["num"] if "num" in kwargs else args[1]
         print(f"{func.__name__} - {count} Requests")
         print(f"Duration  = {duration}")
         print(f"Rate = {count/duration}")

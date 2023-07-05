@@ -27,7 +27,7 @@ class Field:
             args = []
         self.name = name
         self.args = args
-        self.args_suffix = list()
+        self.args_suffix = []
         self.as_name = as_name
 
         if sortable:
@@ -35,8 +35,8 @@ class Field:
         if no_index:
             self.args_suffix.append(Field.NOINDEX)
 
-        if no_index and not sortable:
-            raise ValueError("Non-Sortable non-Indexable fields are ignored")
+            if not sortable:
+                raise ValueError("Non-Sortable non-Indexable fields are ignored")
 
     def append_arg(self, value):
         self.args.append(value)
@@ -71,12 +71,12 @@ class TextField(Field):
 
         if no_stem:
             Field.append_arg(self, self.NOSTEM)
-        if phonetic_matcher and phonetic_matcher in [
+        if phonetic_matcher and phonetic_matcher in {
             "dm:en",
             "dm:fr",
             "dm:pt",
             "dm:es",
-        ]:
+        }:
             Field.append_arg(self, self.PHONETIC)
             Field.append_arg(self, phonetic_matcher)
         if withsuffixtrie:

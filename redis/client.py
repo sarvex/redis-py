@@ -83,7 +83,7 @@ def parse_debug_object(response):
     # The 'type' of the object is the first item in the response, but isn't
     # prefixed with a name
     response = str_if_bytes(response)
-    response = "type:" + response
+    response = f"type:{response}"
     response = dict(kv.split(":") for kv in response.split())
 
     # parse some expected int values from the string response
@@ -111,10 +111,7 @@ def parse_info(response):
     def get_value(value):
         if "," not in value or "=" not in value:
             try:
-                if "." in value:
-                    return float(value)
-                else:
-                    return int(value)
+                return float(value) if "." in value else int(value)
             except ValueError:
                 return value
         else:
@@ -218,7 +215,7 @@ def parse_sentinel_slaves_and_sentinels(response):
 
 
 def parse_sentinel_get_master(response):
-    return response and (response[0], int(response[1])) or None
+    return (response[0], int(response[1])) if response else None
 
 
 def pairs_to_dict(response, decode_keys=False, decode_string_values=False):
@@ -279,9 +276,7 @@ def sort_return_tuples(response, **options):
 
 
 def int_or_none(response):
-    if response is None:
-        return None
-    return int(response)
+    return None if response is None else int(response)
 
 
 def parse_stream_list(response):
@@ -358,9 +353,7 @@ def parse_xpending_range(response):
 
 
 def float_or_none(response):
-    if response is None:
-        return None
-    return float(response)
+    return None if response is None else float(response)
 
 
 def bool_ok(response):
@@ -370,17 +363,14 @@ def bool_ok(response):
 def parse_zadd(response, **options):
     if response is None:
         return None
-    if options.get("as_score"):
-        return float(response)
-    return int(response)
+    return float(response) if options.get("as_score") else int(response)
 
 
 def parse_client_list(response, **options):
-    clients = []
-    for c in str_if_bytes(response).splitlines():
-        # Values might contain '='
-        clients.append(dict(pair.split("=", 1) for pair in c.split(" ")))
-    return clients
+    return [
+        dict(pair.split("=", 1) for pair in c.split(" "))
+        for c in str_if_bytes(response).splitlines()
+    ]
 
 
 def parse_config_get(response, **options):
@@ -479,7 +469,7 @@ def _parse_node_line(line):
         "epoch": epoch,
         "slots": [],
         "migrations": [],
-        "connected": True if connected == "connected" else False,
+        "connected": connected == "connected",
     }
     if len(line_items) >= 9:
         slots, migrations = _parse_slots(line_items[8:])
@@ -501,7 +491,7 @@ def _parse_slots(slot_ranges):
                 {"slot": slot_id, "node_id": src_node_id, "state": "importing"}
             )
         else:
-            s_range = [sl for sl in s_range.split("-")]
+            s_range = list(s_range.split("-"))
             slots.append(s_range)
 
     return slots, migrations
@@ -531,11 +521,7 @@ def parse_geosearch_generic(response, **options):
     except KeyError:  # it means the command was sent via execute_command
         return response
 
-    if type(response) != list:
-        response_list = [response]
-    else:
-        response_list = response
-
+    response_list = [response] if type(response) != list else response
     if not options["withdist"] and not options["withcoord"] and not options["withhash"]:
         # just a bunch of places
         return response_list
@@ -556,14 +542,15 @@ def parse_geosearch_generic(response, **options):
 def parse_command(response, **options):
     commands = {}
     for command in response:
-        cmd_dict = {}
         cmd_name = str_if_bytes(command[0])
-        cmd_dict["name"] = cmd_name
-        cmd_dict["arity"] = int(command[1])
-        cmd_dict["flags"] = [str_if_bytes(flag) for flag in command[2]]
-        cmd_dict["first_key_pos"] = command[3]
-        cmd_dict["last_key_pos"] = command[4]
-        cmd_dict["step_count"] = command[5]
+        cmd_dict = {
+            "name": cmd_name,
+            "arity": int(command[1]),
+            "flags": [str_if_bytes(flag) for flag in command[2]],
+            "first_key_pos": command[3],
+            "last_key_pos": command[4],
+            "step_count": command[5],
+        }
         if len(command) > 7:
             cmd_dict["tips"] = command[7]
             cmd_dict["key_specifications"] = command[8]
@@ -573,7 +560,7 @@ def parse_command(response, **options):
 
 
 def parse_pubsub_numsub(response, **options):
-    return list(zip(response[0::2], response[1::2]))
+    return list(zip(response[::2], response[1::2]))
 
 
 def parse_client_kill(response, **options):
@@ -591,12 +578,12 @@ def parse_acl_getuser(response, **options):
     data["flags"] = list(map(str_if_bytes, data["flags"]))
     data["passwords"] = list(map(str_if_bytes, data["passwords"]))
     data["commands"] = str_if_bytes(data["commands"])
-    if isinstance(data["keys"], str) or isinstance(data["keys"], bytes):
+    if isinstance(data["keys"], (str, bytes)):
         data["keys"] = list(str_if_bytes(data["keys"]).split(" "))
     if data["keys"] == [""]:
         data["keys"] = []
     if "channels" in data:
-        if isinstance(data["channels"], str) or isinstance(data["channels"], bytes):
+        if isinstance(data["channels"], (str, bytes)):
             data["channels"] = list(str_if_bytes(data["channels"]).split(" "))
         if data["channels"] == [""]:
             data["channels"] = []
@@ -1004,42 +991,36 @@ class Redis(AbstractRedis, RedisModuleCommands, CoreCommands, SentinelCommands):
             }
             # based on input, setup appropriate connection args
             if unix_socket_path is not None:
-                kwargs.update(
-                    {
-                        "path": unix_socket_path,
-                        "connection_class": UnixDomainSocketConnection,
-                    }
-                )
+                kwargs |= {
+                    "path": unix_socket_path,
+                    "connection_class": UnixDomainSocketConnection,
+                }
             else:
                 # TCP specific options
-                kwargs.update(
-                    {
-                        "host": host,
-                        "port": port,
-                        "socket_connect_timeout": socket_connect_timeout,
-                        "socket_keepalive": socket_keepalive,
-                        "socket_keepalive_options": socket_keepalive_options,
-                    }
-                )
+                kwargs |= {
+                    "host": host,
+                    "port": port,
+                    "socket_connect_timeout": socket_connect_timeout,
+                    "socket_keepalive": socket_keepalive,
+                    "socket_keepalive_options": socket_keepalive_options,
+                }
 
                 if ssl:
-                    kwargs.update(
-                        {
-                            "connection_class": SSLConnection,
-                            "ssl_keyfile": ssl_keyfile,
-                            "ssl_certfile": ssl_certfile,
-                            "ssl_cert_reqs": ssl_cert_reqs,
-                            "ssl_ca_certs": ssl_ca_certs,
-                            "ssl_ca_data": ssl_ca_data,
-                            "ssl_check_hostname": ssl_check_hostname,
-                            "ssl_password": ssl_password,
-                            "ssl_ca_path": ssl_ca_path,
-                            "ssl_validate_ocsp_stapled": ssl_validate_ocsp_stapled,
-                            "ssl_validate_ocsp": ssl_validate_ocsp,
-                            "ssl_ocsp_context": ssl_ocsp_context,
-                            "ssl_ocsp_expected_cert": ssl_ocsp_expected_cert,
-                        }
-                    )
+                    kwargs |= {
+                        "connection_class": SSLConnection,
+                        "ssl_keyfile": ssl_keyfile,
+                        "ssl_certfile": ssl_certfile,
+                        "ssl_cert_reqs": ssl_cert_reqs,
+                        "ssl_ca_certs": ssl_ca_certs,
+                        "ssl_ca_data": ssl_ca_data,
+                        "ssl_check_hostname": ssl_check_hostname,
+                        "ssl_password": ssl_password,
+                        "ssl_ca_path": ssl_ca_path,
+                        "ssl_validate_ocsp_stapled": ssl_validate_ocsp_stapled,
+                        "ssl_validate_ocsp": ssl_validate_ocsp,
+                        "ssl_ocsp_context": ssl_ocsp_context,
+                        "ssl_ocsp_expected_cert": ssl_ocsp_expected_cert,
+                    }
             connection_pool = ConnectionPool(**kwargs)
         self.connection_pool = connection_pool
         self.connection = None
@@ -1233,8 +1214,7 @@ class Redis(AbstractRedis, RedisModuleCommands, CoreCommands, SentinelCommands):
         if not hasattr(self, "connection"):
             return
 
-        conn = self.connection
-        if conn:
+        if conn := self.connection:
             self.connection = None
             self.connection_pool.release(conn)
 
@@ -1252,9 +1232,8 @@ class Redis(AbstractRedis, RedisModuleCommands, CoreCommands, SentinelCommands):
         is not one of the specified error types
         """
         conn.disconnect()
-        if (
-            conn.retry_on_error is None
-            or isinstance(error, tuple(conn.retry_on_error)) is False
+        if conn.retry_on_error is None or not isinstance(
+            error, tuple(conn.retry_on_error)
         ):
             raise error
 
@@ -1443,14 +1422,16 @@ class PubSub:
         self.pending_unsubscribe_channels.clear()
         self.pending_unsubscribe_patterns.clear()
         if self.channels:
-            channels = {}
-            for k, v in self.channels.items():
-                channels[self.encoder.decode(k, force=True)] = v
+            channels = {
+                self.encoder.decode(k, force=True): v
+                for k, v in self.channels.items()
+            }
             self.subscribe(**channels)
         if self.patterns:
-            patterns = {}
-            for k, v in self.patterns.items():
-                patterns[self.encoder.decode(k, force=True)] = v
+            patterns = {
+                self.encoder.decode(k, force=True): v
+                for k, v in self.patterns.items()
+            }
             self.psubscribe(**patterns)
 
     @property
@@ -1676,19 +1657,19 @@ class PubSub:
         if not self.subscribed:
             # Wait for subscription
             start_time = time.time()
-            if self.subscribed_event.wait(timeout) is True:
-                # The connection was subscribed during the timeout time frame.
-                # The timeout should be adjusted based on the time spent
-                # waiting for the subscription
-                time_spent = time.time() - start_time
-                timeout = max(0.0, timeout - time_spent)
-            else:
+            if self.subscribed_event.wait(timeout) is not True:
                 # The connection isn't subscribed to any channels or patterns,
                 # so no messages are available
                 return None
 
-        response = self.parse_response(block=(timeout is None), timeout=timeout)
-        if response:
+            # The connection was subscribed during the timeout time frame.
+            # The timeout should be adjusted based on the time spent
+            # waiting for the subscription
+            time_spent = time.time() - start_time
+            timeout = max(0.0, timeout - time_spent)
+        if response := self.parse_response(
+            block=(timeout is None), timeout=timeout
+        ):
             return self.handle_message(response, ignore_subscribe_messages)
         return None
 

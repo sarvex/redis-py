@@ -62,10 +62,8 @@ class DelayProxy:
     async def stop(self):
         # clean up enough so that we can reuse the looper
         self.task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await self.task
-        except asyncio.CancelledError:
-            pass
         loop = self.server.get_loop()
         await loop.shutdown_asyncgens()
 

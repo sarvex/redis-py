@@ -67,8 +67,8 @@ class TimeSeries(TimeSeriesCommands):
         pipeline.execute()
 
         """
-        if isinstance(self.client, redis.RedisCluster):
-            p = ClusterPipeline(
+        return (
+            ClusterPipeline(
                 nodes_manager=self.client.nodes_manager,
                 commands_parser=self.client.commands_parser,
                 startup_nodes=self.client.nodes_manager.startup_nodes,
@@ -79,15 +79,14 @@ class TimeSeries(TimeSeriesCommands):
                 reinitialize_steps=self.client.reinitialize_steps,
                 lock=self.client._lock,
             )
-
-        else:
-            p = Pipeline(
+            if isinstance(self.client, redis.RedisCluster)
+            else Pipeline(
                 connection_pool=self.client.connection_pool,
                 response_callbacks=self.MODULE_CALLBACKS,
                 transaction=transaction,
                 shard_hint=shard_hint,
             )
-        return p
+        )
 
 
 class ClusterPipeline(TimeSeriesCommands, redis.cluster.ClusterPipeline):

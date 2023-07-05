@@ -24,7 +24,7 @@ def main():
     span = handle_request(client)
     print("trace:", uptrace.trace_url(span))
 
-    for i in range(10000):
+    for _ in range(10000):
         handle_request(client)
         time.sleep(1)
 

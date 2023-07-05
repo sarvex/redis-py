@@ -41,9 +41,7 @@ def unstring(obj):
 
     intreg = "^\\d+$"
     match = re.findall(intreg, obj)
-    if match != []:
-        return int(match[0])
-    return obj
+    return int(match[0]) if match != [] else obj
 
 
 def decode_list(b):

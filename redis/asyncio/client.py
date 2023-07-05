@@ -199,7 +199,7 @@ class Redis(
         if not connection_pool:
             if not retry_on_error:
                 retry_on_error = []
-            if retry_on_timeout is True:
+            if retry_on_timeout:
                 retry_on_error.append(TimeoutError)
             kwargs = {
                 "db": db,
@@ -220,36 +220,30 @@ class Redis(
             }
             # based on input, setup appropriate connection args
             if unix_socket_path is not None:
-                kwargs.update(
-                    {
-                        "path": unix_socket_path,
-                        "connection_class": UnixDomainSocketConnection,
-                    }
-                )
+                kwargs |= {
+                    "path": unix_socket_path,
+                    "connection_class": UnixDomainSocketConnection,
+                }
             else:
                 # TCP specific options
-                kwargs.update(
-                    {
-                        "host": host,
-                        "port": port,
-                        "socket_connect_timeout": socket_connect_timeout,
-                        "socket_keepalive": socket_keepalive,
-                        "socket_keepalive_options": socket_keepalive_options,
-                    }
-                )
+                kwargs |= {
+                    "host": host,
+                    "port": port,
+                    "socket_connect_timeout": socket_connect_timeout,
+                    "socket_keepalive": socket_keepalive,
+                    "socket_keepalive_options": socket_keepalive_options,
+                }
 
                 if ssl:
-                    kwargs.update(
-                        {
-                            "connection_class": SSLConnection,
-                            "ssl_keyfile": ssl_keyfile,
-                            "ssl_certfile": ssl_certfile,
-                            "ssl_cert_reqs": ssl_cert_reqs,
-                            "ssl_ca_certs": ssl_ca_certs,
-                            "ssl_ca_data": ssl_ca_data,
-                            "ssl_check_hostname": ssl_check_hostname,
-                        }
-                    )
+                    kwargs |= {
+                        "connection_class": SSLConnection,
+                        "ssl_keyfile": ssl_keyfile,
+                        "ssl_certfile": ssl_certfile,
+                        "ssl_cert_reqs": ssl_cert_reqs,
+                        "ssl_ca_certs": ssl_ca_certs,
+                        "ssl_ca_data": ssl_ca_data,
+                        "ssl_check_hostname": ssl_check_hostname,
+                    }
             connection_pool = ConnectionPool(**kwargs)
         self.connection_pool = connection_pool
         self.single_connection_client = single_connection_client
@@ -475,8 +469,7 @@ class Redis(
         let Redis.auto_close_connection_pool decide whether to close the connection
         pool.
         """
-        conn = self.connection
-        if conn:
+        if conn := self.connection:
             self.connection = None
             await self.connection_pool.release(conn)
         if close_connection_pool or (
@@ -498,9 +491,8 @@ class Redis(
         is not one of the specified error types
         """
         await conn.disconnect()
-        if (
-            conn.retry_on_error is None
-            or isinstance(error, tuple(conn.retry_on_error)) is False
+        if conn.retry_on_error is None or not isinstance(
+            error, tuple(conn.retry_on_error)
         ):
             raise error
 
@@ -721,14 +713,16 @@ class PubSub:
         self.pending_unsubscribe_channels.clear()
         self.pending_unsubscribe_patterns.clear()
         if self.channels:
-            channels = {}
-            for k, v in self.channels.items():
-                channels[self.encoder.decode(k, force=True)] = v
+            channels = {
+                self.encoder.decode(k, force=True): v
+                for k, v in self.channels.items()
+            }
             await self.subscribe(**channels)
         if self.patterns:
-            patterns = {}
-            for k, v in self.patterns.items():
-                patterns[self.encoder.decode(k, force=True)] = v
+            patterns = {
+                self.encoder.decode(k, force=True): v
+                for k, v in self.patterns.items()
+            }
             await self.psubscribe(**patterns)
 
     @property
@@ -847,7 +841,7 @@ class PubSub:
         parsed_args = list_or_args((args[0],), args[1:]) if args else args
         new_patterns: Dict[ChannelT, PubSubHandler] = dict.fromkeys(parsed_args)
         # Mypy bug: https://github.com/python/mypy/issues/10970
-        new_patterns.update(kwargs)  # type: ignore[arg-type]
+        new_patterns |= kwargs
         ret_val = await self.execute_command("PSUBSCRIBE", *new_patterns.keys())
         # update the patterns dict AFTER we send the command. we don't want to
         # subscribe twice to these patterns, once for the command and again

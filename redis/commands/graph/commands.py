@@ -27,7 +27,7 @@ class GraphCommands:
 
         query = "CREATE "
         for _, node in self.nodes.items():
-            query += str(node) + ","
+            query += f"{str(node)},"
 
         query += ",".join([str(edge) for edge in self.edges])
 
@@ -99,9 +99,7 @@ class GraphCommands:
         """
         Merge pattern.
         """
-        query = "MERGE "
-        query += str(pattern)
-
+        query = f"MERGE {str(pattern)}"
         return self.query(query)
 
     def delete(self):

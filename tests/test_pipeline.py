@@ -337,7 +337,7 @@ class TestPipeline:
         assert r["a"] == b"1"
 
     def test_exec_error_in_no_transaction_pipeline_unicode_command(self, r):
-        key = chr(3456) + "abcd" + chr(3421)
+        key = f"{chr(3456)}abcd{chr(3421)}"
         r[key] = 1
         with r.pipeline(transaction=False) as pipe:
             pipe.llen(key)

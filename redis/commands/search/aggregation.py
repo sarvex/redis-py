@@ -7,10 +7,7 @@ class Limit:
         self.count = count
 
     def build_args(self):
-        if self.count:
-            return ["LIMIT", str(self.offset), str(self.count)]
-        else:
-            return []
+        return ["LIMIT", str(self.offset), str(self.count)] if self.count else []
 
 
 class Reducer:
@@ -248,11 +245,7 @@ class AggregateRequest:
 
         fields_args = []
         for f in fields:
-            if isinstance(f, SortDirection):
-                fields_args += [f.field, f.DIRSTRING]
-            else:
-                fields_args += [f]
-
+            fields_args += [f.field, f.DIRSTRING] if isinstance(f, SortDirection) else [f]
         ret = ["SORTBY", str(len(fields_args))]
         ret.extend(fields_args)
         max = kwargs.get("max", 0)

@@ -7,22 +7,21 @@ def list_to_dict(aList):
 
 def parse_range(response):
     """Parse range response. Used by TS.RANGE and TS.REVRANGE."""
-    return [tuple((r[0], float(r[1]))) for r in response]
+    return [(r[0], float(r[1])) for r in response]
 
 
 def parse_m_range(response):
     """Parse multi range response. Used by TS.MRANGE and TS.MREVRANGE."""
-    res = []
-    for item in response:
-        res.append({nativestr(item[0]): [list_to_dict(item[1]), parse_range(item[2])]})
+    res = [
+        {nativestr(item[0]): [list_to_dict(item[1]), parse_range(item[2])]}
+        for item in response
+    ]
     return sorted(res, key=lambda d: list(d.keys()))
 
 
 def parse_get(response):
     """Parse get response. Used by TS.GET."""
-    if not response:
-        return None
-    return int(response[0]), float(response[1])
+    return None if not response else (int(response[0]), float(response[1]))
 
 
 def parse_m_get(response):

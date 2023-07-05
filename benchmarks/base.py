@@ -16,8 +16,7 @@ class Benchmark:
         # eventually make this more robust and take optional args from
         # argparse
         if self._client is None or kwargs:
-            defaults = {"db": 9}
-            defaults.update(kwargs)
+            defaults = {"db": 9} | kwargs
             pool = redis.ConnectionPool(**kwargs)
             self._client = redis.Redis(connection_pool=pool)
         return self._client

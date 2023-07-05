@@ -35,10 +35,7 @@ class MockStream:
     async def readline(self):
         self.tick()
         find = self.data.find(b"\n", self.pos)
-        if find >= 0:
-            result = self.data[self.pos : find + 1]
-        else:
-            result = self.data[self.pos :]
+        result = self.data[self.pos : find + 1] if find >= 0 else self.data[self.pos :]
         self.pos += len(result)
         return result
 

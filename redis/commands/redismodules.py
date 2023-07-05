@@ -11,16 +11,14 @@ class RedisModuleCommands:
 
         from .json import JSON
 
-        jj = JSON(client=self, encoder=encoder, decoder=decoder)
-        return jj
+        return JSON(client=self, encoder=encoder, decoder=decoder)
 
     def ft(self, index_name="idx"):
         """Access the search namespace, providing support for redis search."""
 
         from .search import Search
 
-        s = Search(client=self, index_name=index_name)
-        return s
+        return Search(client=self, index_name=index_name)
 
     def ts(self):
         """Access the timeseries namespace, providing support for
@@ -29,48 +27,42 @@ class RedisModuleCommands:
 
         from .timeseries import TimeSeries
 
-        s = TimeSeries(client=self)
-        return s
+        return TimeSeries(client=self)
 
     def bf(self):
         """Access the bloom namespace."""
 
         from .bf import BFBloom
 
-        bf = BFBloom(client=self)
-        return bf
+        return BFBloom(client=self)
 
     def cf(self):
         """Access the bloom namespace."""
 
         from .bf import CFBloom
 
-        cf = CFBloom(client=self)
-        return cf
+        return CFBloom(client=self)
 
     def cms(self):
         """Access the bloom namespace."""
 
         from .bf import CMSBloom
 
-        cms = CMSBloom(client=self)
-        return cms
+        return CMSBloom(client=self)
 
     def topk(self):
         """Access the bloom namespace."""
 
         from .bf import TOPKBloom
 
-        topk = TOPKBloom(client=self)
-        return topk
+        return TOPKBloom(client=self)
 
     def tdigest(self):
         """Access the bloom namespace."""
 
         from .bf import TDigestBloom
 
-        tdigest = TDigestBloom(client=self)
-        return tdigest
+        return TDigestBloom(client=self)
 
     def graph(self, index_name="idx"):
         """Access the graph namespace, providing support for
@@ -79,8 +71,7 @@ class RedisModuleCommands:
 
         from .graph import Graph
 
-        g = Graph(client=self, name=index_name)
-        return g
+        return Graph(client=self, name=index_name)
 
 
 class AsyncRedisModuleCommands(RedisModuleCommands):
@@ -89,8 +80,7 @@ class AsyncRedisModuleCommands(RedisModuleCommands):
 
         from .search import AsyncSearch
 
-        s = AsyncSearch(client=self, index_name=index_name)
-        return s
+        return AsyncSearch(client=self, index_name=index_name)
 
     def graph(self, index_name="idx"):
         """Access the graph namespace, providing support for
@@ -99,5 +89,4 @@ class AsyncRedisModuleCommands(RedisModuleCommands):
 
         from .graph import AsyncGraph
 
-        g = AsyncGraph(client=self, name=index_name)
-        return g
+        return AsyncGraph(client=self, name=index_name)

@@ -339,7 +339,7 @@ class TestPipeline:
         assert await r.get("a") == b"1"
 
     async def test_exec_error_in_no_transaction_pipeline_unicode_command(self, r):
-        key = chr(3456) + "abcd" + chr(3421)
+        key = f"{chr(3456)}abcd{chr(3421)}"
         await r.set(key, 1)
         async with r.pipeline(transaction=False) as pipe:
             pipe.llen(key)

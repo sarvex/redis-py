@@ -22,8 +22,7 @@ class JSONCommands:
         For more information see `JSON.ARRAPPEND <https://redis.io/commands/json.arrappend>`_..
         """  # noqa
         pieces = [name, str(path)]
-        for o in args:
-            pieces.append(self._encode(o))
+        pieces.extend(self._encode(o) for o in args)
         return self.execute_command("JSON.ARRAPPEND", *pieces)
 
     def arrindex(
@@ -43,7 +42,7 @@ class JSONCommands:
 
         For more information see `JSON.ARRINDEX <https://redis.io/commands/json.arrindex>`_.
         """  # noqa
-        pieces = [name, str(path), self._encode(scalar)]
+        pieces = [name, path, self._encode(scalar)]
         if start is not None:
             pieces.append(start)
             if stop is not None:
@@ -59,9 +58,8 @@ class JSONCommands:
 
         For more information see `JSON.ARRINSERT <https://redis.io/commands/json.arrinsert>`_.
         """  # noqa
-        pieces = [name, str(path), index]
-        for o in args:
-            pieces.append(self._encode(o))
+        pieces = [name, path, index]
+        pieces.extend(self._encode(o) for o in args)
         return self.execute_command("JSON.ARRINSERT", *pieces)
 
     def arrlen(
@@ -96,7 +94,7 @@ class JSONCommands:
 
         For more information see `JSON.ARRTRIM <https://redis.io/commands/json.arrtrim>`_.
         """  # noqa
-        return self.execute_command("JSON.ARRTRIM", name, str(path), start, stop)
+        return self.execute_command("JSON.ARRTRIM", name, path, start, stop)
 
     def type(self, name: str, path: Optional[str] = Path.root_path()) -> List[str]:
         """Get the type of the JSON value under ``path`` from key ``name``.
@@ -136,9 +134,7 @@ class JSONCommands:
 
         For more information see `JSON.NUMINCRBY <https://redis.io/commands/json.numincrby>`_.
         """  # noqa
-        return self.execute_command(
-            "JSON.NUMINCRBY", name, str(path), self._encode(number)
-        )
+        return self.execute_command("JSON.NUMINCRBY", name, path, self._encode(number))
 
     @deprecated_function(version="4.0.0", reason="deprecated since redisjson 1.0.0")
     def nummultby(self, name: str, path: str, number: int) -> str:
@@ -147,9 +143,7 @@ class JSONCommands:
 
         For more information see `JSON.NUMMULTBY <https://redis.io/commands/json.nummultby>`_.
         """  # noqa
-        return self.execute_command(
-            "JSON.NUMMULTBY", name, str(path), self._encode(number)
-        )
+        return self.execute_command("JSON.NUMMULTBY", name, path, self._encode(number))
 
     def clear(self, name: str, path: Optional[str] = Path.root_path()) -> int:
         """Empty arrays and objects (to have zero slots/keys without deleting the
@@ -188,13 +182,11 @@ class JSONCommands:
         if no_escape:
             pieces.append("noescape")
 
-        if len(args) == 0:
+        if not args:
             pieces.append(Path.root_path())
 
         else:
-            for p in args:
-                pieces.append(str(p))
-
+            pieces.extend(str(p) for p in args)
         # Handle case where key doesn't exist. The JSONDecoder would raise a
         # TypeError exception since it can't decode None
         try:
@@ -211,7 +203,7 @@ class JSONCommands:
         """  # noqa
         pieces = []
         pieces += keys
-        pieces.append(str(path))
+        pieces.append(path)
         return self.execute_command("JSON.MGET", *pieces)
 
     def set(
@@ -239,7 +231,7 @@ class JSONCommands:
         if decode_keys:
             obj = decode_dict_keys(obj)
 
-        pieces = [name, str(path), self._encode(obj)]
+        pieces = [name, path, self._encode(obj)]
 
         # Handle existential modifiers
         if nx and xx:
@@ -289,7 +281,7 @@ class JSONCommands:
         if decode_keys:
             obj = decode_dict_keys(obj)
 
-        pieces = [name, str(path), self._encode(obj)]
+        pieces = [name, path, self._encode(obj)]
 
         return self.execute_command("JSON.MERGE", *pieces)
 
@@ -407,8 +399,7 @@ class JSONCommands:
         if subcommand == "MEMORY":
             if key is None:
                 raise DataError("No key specified")
-            pieces.append(key)
-            pieces.append(str(path))
+            pieces.extend((key, str(path)))
         return self.execute_command("JSON.DEBUG", *pieces)
 
     @deprecated_function(

@@ -222,7 +222,7 @@ def test_range_advanced(client):
             1,
             0,
             500,
-            filter_by_ts=[i for i in range(10, 20)],
+            filter_by_ts=list(range(10, 20)),
             filter_by_min_value=1,
             filter_by_max_value=2,
         )
@@ -332,7 +332,7 @@ def test_rev_range(client):
             1,
             0,
             500,
-            filter_by_ts=[i for i in range(10, 20)],
+            filter_by_ts=list(range(10, 20)),
             filter_by_min_value=1,
             filter_by_max_value=2,
         )
@@ -471,7 +471,7 @@ def test_multi_range_advanced(client):
         0,
         200,
         filters=["Test=This"],
-        filter_by_ts=[i for i in range(10, 20)],
+        filter_by_ts=list(range(10, 20)),
         filter_by_min_value=1,
         filter_by_max_value=2,
     )
@@ -573,7 +573,7 @@ def test_multi_reverse_range(client):
         0,
         200,
         filters=["Test=This"],
-        filter_by_ts=[i for i in range(10, 20)],
+        filter_by_ts=list(range(10, 20)),
         filter_by_min_value=1,
         filter_by_max_value=2,
     )

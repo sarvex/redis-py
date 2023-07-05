@@ -196,7 +196,7 @@ class RedisCluster(AbstractRedis, AbstractRedisCluster, AsyncRedisClusterCommand
         :class:`~redis.asyncio.connection.Connection` when created.
         In the case of conflicting arguments, querystring arguments are used.
         """
-        kwargs.update(parse_url(url))
+        kwargs |= parse_url(url)
         if kwargs.pop("connection_class", None) is SSLConnection:
             kwargs["ssl"] = True
         return cls(**kwargs)
@@ -303,17 +303,15 @@ class RedisCluster(AbstractRedis, AbstractRedisCluster, AsyncRedisClusterCommand
 
         if ssl:
             # SSL related kwargs
-            kwargs.update(
-                {
-                    "connection_class": SSLConnection,
-                    "ssl_ca_certs": ssl_ca_certs,
-                    "ssl_ca_data": ssl_ca_data,
-                    "ssl_cert_reqs": ssl_cert_reqs,
-                    "ssl_certfile": ssl_certfile,
-                    "ssl_check_hostname": ssl_check_hostname,
-                    "ssl_keyfile": ssl_keyfile,
-                }
-            )
+            kwargs |= {
+                "connection_class": SSLConnection,
+                "ssl_ca_certs": ssl_ca_certs,
+                "ssl_ca_data": ssl_ca_data,
+                "ssl_cert_reqs": ssl_cert_reqs,
+                "ssl_certfile": ssl_certfile,
+                "ssl_check_hostname": ssl_check_hostname,
+                "ssl_keyfile": ssl_keyfile,
+            }
 
         if read_from_replicas:
             # Call our on_connect function to configure READONLY mode
@@ -329,17 +327,16 @@ class RedisCluster(AbstractRedis, AbstractRedisCluster, AsyncRedisClusterCommand
                 # Default errors for retrying
                 retry_on_error = [ConnectionError, TimeoutError]
             self.retry.update_supported_errors(retry_on_error)
-            kwargs.update({"retry": self.retry})
+            kwargs["retry"] = self.retry
 
         kwargs["response_callbacks"] = self.__class__.RESPONSE_CALLBACKS.copy()
         self.connection_kwargs = kwargs
 
         if startup_nodes:
-            passed_nodes = []
-            for node in startup_nodes:
-                passed_nodes.append(
-                    ClusterNode(node.host, node.port, **self.connection_kwargs)
-                )
+            passed_nodes = [
+                ClusterNode(node.host, node.port, **self.connection_kwargs)
+                for node in startup_nodes
+            ]
             startup_nodes = passed_nodes
         else:
             startup_nodes = []
@@ -715,14 +712,16 @@ class RedisCluster(AbstractRedis, AbstractRedisCluster, AsyncRedisClusterCommand
                         )
                     return dict(zip(keys, values))
             except Exception as e:
-                if retry_attempts > 0 and type(e) in self.__class__.ERRORS_ALLOW_RETRY:
-                    # The nodes and slots cache were should be reinitialized.
-                    # Try again with the new cluster setup.
-                    retry_attempts -= 1
-                    continue
-                else:
+                if (
+                    retry_attempts <= 0
+                    or type(e) not in self.__class__.ERRORS_ALLOW_RETRY
+                ):
                     # raise the exception
                     raise e
+                # The nodes and slots cache were should be reinitialized.
+                # Try again with the new cluster setup.
+                retry_attempts -= 1
+                continue
 
     async def _execute_command(
         self, target_node: "ClusterNode", *args: Union[KeyT, EncodableT], **kwargs: Any
@@ -970,8 +969,7 @@ class ClusterNode:
             ),
             return_exceptions=True,
         )
-        exc = next((res for res in ret if isinstance(res, Exception)), None)
-        if exc:
+        if exc := next((res for res in ret if isinstance(res, Exception)), None):
             raise exc
 
     def acquire_connection(self) -> Connection:
@@ -1242,8 +1240,7 @@ class NodesManager:
 
                 for i in range(int(slot[0]), int(slot[1]) + 1):
                     if i not in tmp_slots:
-                        tmp_slots[i] = []
-                        tmp_slots[i].append(target_node)
+                        tmp_slots[i] = [target_node]
                         replica_nodes = [slot[j] for j in range(3, len(slot))]
 
                         for replica_node in replica_nodes:
@@ -1278,12 +1275,7 @@ class NodesManager:
                                     f'slots cache: {", ".join(disagreements)}'
                                 )
 
-            # Validate if all slots are covered or if we should try next startup node
-            fully_covered = True
-            for i in range(REDIS_CLUSTER_HASH_SLOTS):
-                if i not in tmp_slots:
-                    fully_covered = False
-                    break
+            fully_covered = all(i in tmp_slots for i in range(REDIS_CLUSTER_HASH_SLOTS))
             if fully_covered:
                 break
 
@@ -1329,9 +1321,7 @@ class NodesManager:
         internal value.  Useful if the client is not connecting directly
         to the cluster.
         """
-        if self.address_remap:
-            return self.address_remap((host, port))
-        return host, port
+        return self.address_remap((host, port)) if self.address_remap else (host, port)
 
 
 class ClusterPipeline(AbstractRedis, AbstractRedisCluster, AsyncRedisClusterCommands):
@@ -1459,15 +1449,14 @@ class ClusterPipeline(AbstractRedis, AbstractRedisCluster, AsyncRedisClusterComm
                         allow_redirections=allow_redirections,
                     )
                 except BaseException as e:
-                    if type(e) in self.__class__.ERRORS_ALLOW_RETRY:
-                        # Try again with the new cluster setup.
-                        exception = e
-                        await self._client.close()
-                        await asyncio.sleep(0.25)
-                    else:
+                    if type(e) not in self.__class__.ERRORS_ALLOW_RETRY:
                         # All other errors should be raised.
                         raise
 
+                    # Try again with the new cluster setup.
+                    exception = e
+                    await self._client.close()
+                    await asyncio.sleep(0.25)
             # If it fails the configured number of times then raise an exception
             raise exception
         finally:

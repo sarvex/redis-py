@@ -68,7 +68,7 @@ def make_subscribe_test_data(pubsub, type):
             "unsub_type": "unsubscribe",
             "sub_func": pubsub.subscribe,
             "unsub_func": pubsub.unsubscribe,
-            "keys": ["foo", "bar", "uni" + chr(4456) + "code"],
+            "keys": ["foo", "bar", f"uni{chr(4456)}code"],
         }
     elif type == "pattern":
         return {
@@ -77,7 +77,7 @@ def make_subscribe_test_data(pubsub, type):
             "unsub_type": "punsubscribe",
             "sub_func": pubsub.psubscribe,
             "unsub_func": pubsub.punsubscribe,
-            "keys": ["f*", "b*", "uni" + chr(4456) + "*"],
+            "keys": ["f*", "b*", f"uni{chr(4456)}*"],
         }
     assert False, f"invalid subscribe type: {type}"
 
@@ -387,7 +387,7 @@ class TestPubSubMessages:
 
     async def test_unicode_channel_message_handler(self, r: redis.Redis):
         p = r.pubsub(ignore_subscribe_messages=True)
-        channel = "uni" + chr(4456) + "code"
+        channel = f"uni{chr(4456)}code"
         channels = {channel: self.message_handler}
         await p.subscribe(**channels)
         assert await wait_for_message(p) is None
@@ -397,12 +397,10 @@ class TestPubSubMessages:
         await p.close()
 
     @pytest.mark.onlynoncluster
-    # see: https://redis-py-cluster.readthedocs.io/en/stable/pubsub.html
-    # #known-limitations-with-pubsub
     async def test_unicode_pattern_message_handler(self, r: redis.Redis):
         p = r.pubsub(ignore_subscribe_messages=True)
-        pattern = "uni" + chr(4456) + "*"
-        channel = "uni" + chr(4456) + "code"
+        pattern = f"uni{chr(4456)}*"
+        channel = f"uni{chr(4456)}code"
         await p.psubscribe(**{pattern: self.message_handler})
         assert await wait_for_message(p) is None
         assert await r.publish(channel, "test message") == 1
@@ -502,7 +500,7 @@ class TestPubSubAutoDecoding:
         self.message = None
         await p.connection.disconnect()
         assert await wait_for_message(p) is None  # should reconnect
-        new_data = self.data + "new data"
+        new_data = f"{self.data}new data"
         await r.publish(self.channel, new_data)
         assert await wait_for_message(p) is None
         assert self.message == self.make_message("message", self.channel, new_data)
@@ -522,7 +520,7 @@ class TestPubSubAutoDecoding:
         self.message = None
         await p.connection.disconnect()
         assert await wait_for_message(p) is None  # should reconnect
-        new_data = self.data + "new data"
+        new_data = f"{self.data}new data"
         await r.publish(self.channel, new_data)
         assert await wait_for_message(p) is None
         assert self.message == self.make_message(
@@ -567,11 +565,11 @@ class TestPubSubSubcommands:
     async def test_pubsub_numsub(self, r: redis.Redis):
         p1 = r.pubsub()
         await p1.subscribe("foo", "bar", "baz")
-        for i in range(3):
+        for _ in range(3):
             assert (await wait_for_message(p1))["type"] == "subscribe"
         p2 = r.pubsub()
         await p2.subscribe("bar", "baz")
-        for i in range(2):
+        for _ in range(2):
             assert (await wait_for_message(p2))["type"] == "subscribe"
         p3 = r.pubsub()
         await p3.subscribe("baz")
@@ -587,7 +585,7 @@ class TestPubSubSubcommands:
     async def test_pubsub_numpat(self, r: redis.Redis):
         p = r.pubsub()
         await p.psubscribe("*oo", "*ar", "b*z")
-        for i in range(3):
+        for _ in range(3):
             assert (await wait_for_message(p))["type"] == "psubscribe"
         assert await r.pubsub_numpat() == 3
         await p.close()
@@ -915,7 +913,7 @@ class TestPubSubAutoReconnect:
                 # make sure that we did notice the connection error
                 # or reconnected without any error
                 if old_state == 1:
-                    assert self.state in (2, 3)
+                    assert self.state in {2, 3}
 
     async def loop_step_get_message(self):
         # get a single message via get_message

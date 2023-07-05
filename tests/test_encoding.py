@@ -17,21 +17,21 @@ class TestEncoding:
         return _get_client(redis.Redis, request=request, decode_responses=False)
 
     def test_simple_encoding(self, r_no_decode):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         r_no_decode["unicode-string"] = unicode_string.encode("utf-8")
         cached_val = r_no_decode["unicode-string"]
         assert isinstance(cached_val, bytes)
         assert unicode_string == cached_val.decode("utf-8")
 
     def test_simple_encoding_and_decoding(self, r):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         r["unicode-string"] = unicode_string
         cached_val = r["unicode-string"]
         assert isinstance(cached_val, str)
         assert unicode_string == cached_val
 
     def test_memoryview_encoding(self, r_no_decode):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         unicode_string_view = memoryview(unicode_string.encode("utf-8"))
         r_no_decode["unicode-string-memoryview"] = unicode_string_view
         cached_val = r_no_decode["unicode-string-memoryview"]
@@ -40,7 +40,7 @@ class TestEncoding:
         assert unicode_string == cached_val.decode("utf-8")
 
     def test_memoryview_encoding_and_decoding(self, r):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         unicode_string_view = memoryview(unicode_string.encode("utf-8"))
         r["unicode-string-memoryview"] = unicode_string_view
         cached_val = r["unicode-string-memoryview"]
@@ -48,7 +48,7 @@ class TestEncoding:
         assert unicode_string == cached_val
 
     def test_list_encoding(self, r):
-        unicode_string = chr(3456) + "abcd" + chr(3421)
+        unicode_string = f"{chr(3456)}abcd{chr(3421)}"
         result = [unicode_string, unicode_string, unicode_string]
         r.rpush("a", *result)
         assert r.lrange("a", 0, -1) == result

@@ -35,12 +35,11 @@ class TestConnectionPool:
         connection_class=redis.Connection,
     ):
         connection_kwargs = connection_kwargs or {}
-        pool = redis.ConnectionPool(
+        return redis.ConnectionPool(
             connection_class=connection_class,
             max_connections=max_connections,
             **connection_kwargs,
         )
-        return pool
 
     def test_connection_creation(self):
         connection_kwargs = {"foo": "bar", "biz": "baz"}
@@ -106,13 +105,12 @@ class TestConnectionPool:
 class TestBlockingConnectionPool:
     def get_pool(self, connection_kwargs=None, max_connections=10, timeout=20):
         connection_kwargs = connection_kwargs or {}
-        pool = redis.BlockingConnectionPool(
+        return redis.BlockingConnectionPool(
             connection_class=DummyConnection,
             max_connections=max_connections,
             timeout=timeout,
             **connection_kwargs,
         )
-        return pool
 
     def test_connection_creation(self, master_host):
         connection_kwargs = {

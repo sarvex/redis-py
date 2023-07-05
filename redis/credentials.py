@@ -21,6 +21,4 @@ class UsernamePasswordCredentialProvider(CredentialProvider):
         self.password = password or ""
 
     def get_credentials(self):
-        if self.username:
-            return self.username, self.password
-        return (self.password,)
+        return (self.username, self.password) if self.username else (self.password, )

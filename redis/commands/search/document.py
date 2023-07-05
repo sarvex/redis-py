@@ -13,5 +13,4 @@ class Document:
         return f"Document {self.__dict__}"
 
     def __getitem__(self, item):
-        value = getattr(self, item)
-        return value
+        return getattr(self, item)

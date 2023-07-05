@@ -47,7 +47,7 @@ class Operation:
         return self.name == o.name and self.args == o.args
 
     def __str__(self) -> str:
-        args_str = "" if self.args is None else " | " + self.args
+        args_str = "" if self.args is None else f" | {self.args}"
         return f"{self.name}{args_str}"
 
 
@@ -88,18 +88,16 @@ class ExecutionPlan:
         if root_a.child_count() != root_b.child_count():
             return False
 
-        # recursively compare children
-        for i in range(root_a.child_count()):
-            if not self._compare_operations(root_a.children[i], root_b.children[i]):
-                return False
-
-        return True
+        return all(
+            self._compare_operations(root_a.children[i], root_b.children[i])
+            for i in range(root_a.child_count())
+        )
 
     def __str__(self) -> str:
         def aggraget_str(str_children):
             return "\n".join(
                 [
-                    "    " + line
+                    f"    {line}"
                     for str_child in str_children
                     for line in str_child.splitlines()
                 ]
@@ -142,14 +140,13 @@ class ExecutionPlan:
         op_res = op_f(op)
         if len(op.children) == 0:
             return op_res  # no children return
-        else:
-            # apply _operation_traverse recursively
-            children = [
-                self._operation_traverse(child, op_f, aggregate_f, combine_f)
-                for child in op.children
-            ]
-            # combine the operation result with the children aggregated result
-            return combine_f(op_res, aggregate_f(children))
+        # apply _operation_traverse recursively
+        children = [
+            self._operation_traverse(child, op_f, aggregate_f, combine_f)
+            for child in op.children
+        ]
+        # combine the operation result with the children aggregated result
+        return combine_f(op_res, aggregate_f(children))
 
     def _operation_tree(self):
         """Build the operation tree from the string representation"""
@@ -165,11 +162,9 @@ class ExecutionPlan:
             name = args[0].strip()
             args.pop(0)
             if len(args) > 0 and "Records produced" in args[-1]:
-                records_produced = int(
-                    re.search("Records produced: (\\d+)", args[-1]).group(1)
-                )
+                records_produced = int(re.search("Records produced: (\\d+)", args[-1])[1])
                 execution_time = float(
-                    re.search("Execution time: (\\d+.\\d+) ms", args[-1]).group(1)
+                    re.search("Execution time: (\\d+.\\d+) ms", args[-1])[1]
                 )
                 profile_stats = ProfileStats(records_produced, execution_time)
                 args.pop(-1)

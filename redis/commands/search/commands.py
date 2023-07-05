@@ -378,11 +378,9 @@ class SearchCommands:
             return []
         args = []
         if len(query_params) > 0:
-            args.append("params")
-            args.append(len(query_params) * 2)
+            args.extend(("params", len(query_params) * 2))
             for key, value in query_params.items():
-                args.append(key)
-                args.append(value)
+                args.extend((key, value))
         return args
 
     def _mk_query_args(self, query, query_params: Dict[str, Union[str, int, float]]):
@@ -616,8 +614,7 @@ class SearchCommands:
 
         For more information see `FT.DICTADD <https://redis.io/commands/ft.dictadd>`_.
         """  # noqa
-        cmd = [DICT_ADD_CMD, name]
-        cmd.extend(terms)
+        cmd = [DICT_ADD_CMD, name, *terms]
         return self.execute_command(*cmd)
 
     def dict_del(self, name, *terms):
@@ -630,8 +627,7 @@ class SearchCommands:
 
         For more information see `FT.DICTDEL <https://redis.io/commands/ft.dictdel>`_.
         """  # noqa
-        cmd = [DICT_DEL_CMD, name]
-        cmd.extend(terms)
+        cmd = [DICT_DEL_CMD, name, *terms]
         return self.execute_command(*cmd)
 
     def dict_dump(self, name):
@@ -671,8 +667,7 @@ class SearchCommands:
         """  # noqa
         cmd = [CONFIG_CMD, "GET", option]
         res = {}
-        raw = self.execute_command(*cmd)
-        if raw:
+        if raw := self.execute_command(*cmd):
             for kvs in raw:
                 res[kvs[0]] = kvs[1]
         return res
@@ -744,9 +739,7 @@ class SearchCommands:
             if kwargs.get("increment"):
                 args.append("INCR")
             if sug.payload:
-                args.append("PAYLOAD")
-                args.append(sug.payload)
-
+                args.extend(("PAYLOAD", sug.payload))
             pipe.execute_command(*args)
 
         return pipe.execute()[-1]
@@ -811,12 +804,10 @@ class SearchCommands:
             args.append(WITHPAYLOADS)
 
         ret = self.execute_command(*args)
-        results = []
         if not ret:
-            return results
-
+            return []
         parser = SuggestionParser(with_scores, with_payloads, ret)
-        return [s for s in parser]
+        return list(parser)
 
     def synupdate(self, groupid, skipinitial=False, *terms):
         """
@@ -1038,9 +1029,7 @@ class AsyncSearchCommands(SearchCommands):
             if kwargs.get("increment"):
                 args.append("INCR")
             if sug.payload:
-                args.append("PAYLOAD")
-                args.append(sug.payload)
-
+                args.extend(("PAYLOAD", sug.payload))
             pipe.execute_command(*args)
 
         return (await pipe.execute())[-1]
@@ -1088,9 +1077,7 @@ class AsyncSearchCommands(SearchCommands):
             args.append(WITHPAYLOADS)
 
         ret = await self.execute_command(*args)
-        results = []
         if not ret:
-            return results
-
+            return []
         parser = SuggestionParser(with_scores, with_payloads, ret)
-        return [s for s in parser]
+        return list(parser)

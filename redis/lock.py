@@ -139,7 +139,7 @@ class Lock:
         self.sleep = sleep
         self.blocking = blocking
         self.blocking_timeout = blocking_timeout
-        self.thread_local = bool(thread_local)
+        self.thread_local = thread_local
         self.local = threading.local() if self.thread_local else SimpleNamespace()
         self.local.token = None
         self.register_scripts()
@@ -215,14 +215,8 @@ class Lock:
             mod_time.sleep(sleep)
 
     def do_acquire(self, token: str) -> bool:
-        if self.timeout:
-            # convert to milliseconds
-            timeout = int(self.timeout * 1000)
-        else:
-            timeout = None
-        if self.redis.set(self.name, token, nx=True, px=timeout):
-            return True
-        return False
+        timeout = int(self.timeout * 1000) if self.timeout else None
+        return bool(self.redis.set(self.name, token, nx=True, px=timeout))
 
     def locked(self) -> bool:
         """

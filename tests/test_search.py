@@ -76,8 +76,7 @@ def createIndex(client, num_docs=100, definition=None):
     bzfp = TextIOWrapper(bz2.BZ2File(WILL_PLAY_TEXT), encoding="utf8")
 
     r = csv.reader(bzfp, delimiter=";")
-    for n, line in enumerate(r):
-
+    for line in r:
         play, chapter, _, text = line[1], line[2], line[4], line[5]
 
         key = f"{play}:{chapter}".lower()
@@ -311,9 +310,9 @@ def test_drop_index(client):
     """
     Ensure the index gets dropped by data remains by default
     """
-    for x in range(20):
+    idx = "HaveIt"
+    for _ in range(20):
         for keep_docs in [[True, {}], [False, {"name": "haveit"}]]:
-            idx = "HaveIt"
             index = getClient(client)
             index.hset("index:haveit", mapping={"name": "haveit"})
             idef = IndexDefinition(prefix=["index:"])
@@ -962,8 +961,8 @@ def test_aggregations_apply(client):
         CreatedDateTimeUTC="@CreatedDateTimeUTC * 10"
     )
     res = client.ft().aggregate(req)
-    res_set = set([res.rows[0][1], res.rows[1][1]])
-    assert res_set == set(["6373878785249699840", "6373878758592700416"])
+    res_set = {res.rows[0][1], res.rows[1][1]}
+    assert res_set == {"6373878785249699840", "6373878758592700416"}
 
 
 @pytest.mark.redismod

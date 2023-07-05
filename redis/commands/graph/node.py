@@ -26,7 +26,7 @@ class Node:
             self.label = label
             self.labels = [label]
         elif isinstance(label, list) and all(
-            [isinstance(inner_label, str) for inner_label in label]
+            isinstance(inner_label, str) for inner_label in label
         ):
             self.label = label[0]
             self.labels = label
@@ -41,7 +41,7 @@ class Node:
         res = ""
         if self.properties:
             props = ",".join(
-                key + ":" + str(quote_string(val))
+                f"{key}:{str(quote_string(val))}"
                 for key, val in sorted(self.properties.items())
             )
             res += "{" + props + "}"
@@ -56,7 +56,7 @@ class Node:
             res += ":" + ":".join(self.labels)
         if self.properties:
             props = ",".join(
-                key + ":" + str(quote_string(val))
+                f"{key}:{str(quote_string(val))}"
                 for key, val in sorted(self.properties.items())
             )
             res += "{" + props + "}"
@@ -82,7 +82,4 @@ class Node:
             return False
 
         # Compare properties.
-        if self.properties != rhs.properties:
-            return False
-
-        return True
+        return self.properties == rhs.properties

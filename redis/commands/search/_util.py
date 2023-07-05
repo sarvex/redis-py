@@ -1,7 +1,5 @@
 def to_string(s):
-    if isinstance(s, str):
+    if isinstance(s, str) or not isinstance(s, bytes):
         return s
-    elif isinstance(s, bytes):
-        return s.decode("utf-8", "ignore")
     else:
-        return s  # Not a string we care about
+        return s.decode("utf-8", "ignore")

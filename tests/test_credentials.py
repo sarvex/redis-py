@@ -45,7 +45,7 @@ def init_acl_user(r, request, username, password):
             r.acl_setuser(
                 username,
                 enabled=True,
-                passwords=["+" + password],
+                passwords=[f"+{password}"],
                 keys="~*",
                 commands=[
                     "+ping",

@@ -17,20 +17,18 @@ class CommandsParser:
 
     def initialize(self, r):
         commands = r.execute_command("COMMAND")
-        uppercase_commands = []
-        for cmd in commands:
-            if any(x.isupper() for x in cmd):
-                uppercase_commands.append(cmd)
+        uppercase_commands = [cmd for cmd in commands if any(x.isupper() for x in cmd)]
         for cmd in uppercase_commands:
             commands[cmd.lower()] = commands.pop(cmd)
         self.commands = commands
 
     def parse_subcommand(self, command, **options):
-        cmd_dict = {}
         cmd_name = str_if_bytes(command[0])
-        cmd_dict["name"] = cmd_name
-        cmd_dict["arity"] = int(command[1])
-        cmd_dict["flags"] = [str_if_bytes(flag) for flag in command[2]]
+        cmd_dict = {
+            "name": cmd_name,
+            "arity": int(command[1]),
+            "flags": [str_if_bytes(flag) for flag in command[2]],
+        }
         cmd_dict["first_key_pos"] = command[3]
         cmd_dict["last_key_pos"] = command[4]
         cmd_dict["step_count"] = command[5]
@@ -78,9 +76,9 @@ class CommandsParser:
 
         command = self.commands.get(cmd_name)
         if "movablekeys" in command["flags"]:
-            keys = self._get_moveable_keys(redis_conn, *args)
+            return self._get_moveable_keys(redis_conn, *args)
         elif "pubsub" in command["flags"] or command["name"] == "pubsub":
-            keys = self._get_pubsub_keys(*args)
+            return self._get_pubsub_keys(*args)
         else:
             if (
                 command["step_count"] == 0
@@ -104,9 +102,7 @@ class CommandsParser:
             keys_pos = list(
                 range(command["first_key_pos"], last_key_pos + 1, command["step_count"])
             )
-            keys = [args[pos] for pos in keys_pos]
-
-        return keys
+            return [args[pos] for pos in keys_pos]
 
     def _get_moveable_keys(self, redis_conn, *args):
         """
@@ -121,7 +117,7 @@ class CommandsParser:
         cmd_name = args[0]
         # The command name should be splitted into separate arguments,
         # e.g. 'MEMORY USAGE' will be splitted into ['MEMORY', 'USAGE']
-        pieces = pieces + cmd_name.split()
+        pieces += cmd_name.split()
         pieces = pieces + list(args[1:])
         try:
             keys = redis_conn.execute_command("COMMAND GETKEYS", *pieces)

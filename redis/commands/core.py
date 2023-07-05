@@ -528,13 +528,11 @@ class ManagementCommands(CommandsProtocol):
             client_types = ("normal", "master", "replica", "pubsub")
             if str(_type).lower() not in client_types:
                 raise DataError(f"CLIENT LIST _type must be one of {client_types!r}")
-            args.append(b"TYPE")
-            args.append(_type)
+            args.extend((b"TYPE", _type))
         if not isinstance(client_id, list):
             raise DataError("client_id must be a list")
         if client_id:
-            args.append(b"ID")
-            args.append(" ".join(client_id))
+            args.extend((b"ID", " ".join(client_id)))
         return self.execute_command("CLIENT LIST", *args, **kwargs)
 
     def client_getname(self, **kwargs) -> ResponseT:
@@ -664,7 +662,7 @@ class ManagementCommands(CommandsProtocol):
         See https://redis.io/commands/client-tracking
         """
 
-        if len(prefix) != 0 and bcast is False:
+        if len(prefix) != 0 and not bcast:
             raise DataError("Prefix can only be used with bcast")
 
         pieces = ["ON"] if on else ["OFF"]
@@ -717,7 +715,7 @@ class ManagementCommands(CommandsProtocol):
 
         For more information see https://redis.io/commands/client-unblock
         """
-        args = ["CLIENT UNBLOCK", int(client_id)]
+        args = ["CLIENT UNBLOCK", client_id]
         if error:
             args.append(b"ERROR")
         return self.execute_command(*args, **kwargs)
@@ -941,8 +939,7 @@ class ManagementCommands(CommandsProtocol):
         """
         from redis.client import NEVER_DECODE
 
-        options = {}
-        options[NEVER_DECODE] = []
+        options = {NEVER_DECODE: []}
         return self.execute_command("SYNC", **options)
 
     def psync(self, replicationid: str, offset: int):
@@ -954,8 +951,7 @@ class ManagementCommands(CommandsProtocol):
         """
         from redis.client import NEVER_DECODE
 
-        options = {}
-        options[NEVER_DECODE] = []
+        options = {NEVER_DECODE: []}
         return self.execute_command("PSYNC", replicationid, offset, **options)
 
     def swapdb(self, first: int, second: int, **kwargs) -> ResponseT:
@@ -1087,8 +1083,7 @@ class ManagementCommands(CommandsProtocol):
         if replace:
             pieces.append(b"REPLACE")
         if auth:
-            pieces.append(b"AUTH")
-            pieces.append(auth)
+            pieces.extend((b"AUTH", auth))
         pieces.append(b"KEYS")
         pieces.extend(keys)
         return self.execute_command(
@@ -1573,7 +1568,7 @@ class BasicKeyCommands(CommandsProtocol):
         if start is not None and end is not None:
             params.append(start)
             params.append(end)
-        elif (start is not None and end is None) or (end is not None and start is None):
+        elif start is not None or end is not None:
             raise DataError("Both start and end must be specified")
         if mode is not None:
             params.append(mode)
@@ -1710,8 +1705,7 @@ class BasicKeyCommands(CommandsProtocol):
         """
         from redis.client import NEVER_DECODE
 
-        options = {}
-        options[NEVER_DECODE] = []
+        options = {NEVER_DECODE: []}
         return self.execute_command("DUMP", name, **options)
 
     def exists(self, *names: KeyT) -> ResponseT:
@@ -1749,7 +1743,7 @@ class BasicKeyCommands(CommandsProtocol):
         if isinstance(time, datetime.timedelta):
             time = int(time.total_seconds())
 
-        exp_option = list()
+        exp_option = []
         if nx:
             exp_option.append("NX")
         if xx:
@@ -1786,7 +1780,7 @@ class BasicKeyCommands(CommandsProtocol):
         if isinstance(when, datetime.datetime):
             when = int(when.timestamp())
 
-        exp_option = list()
+        exp_option = []
         if nx:
             exp_option.append("NX")
         if xx:
@@ -2069,7 +2063,7 @@ class BasicKeyCommands(CommandsProtocol):
         if isinstance(time, datetime.timedelta):
             time = int(time.total_seconds() * 1000)
 
-        exp_option = list()
+        exp_option = []
         if nx:
             exp_option.append("NX")
         if xx:
@@ -2104,7 +2098,7 @@ class BasicKeyCommands(CommandsProtocol):
         """
         if isinstance(when, datetime.datetime):
             when = int(when.timestamp() * 1000)
-        exp_option = list()
+        exp_option = []
         if nx:
             exp_option.append("NX")
         if xx:
@@ -2337,7 +2331,7 @@ class BasicKeyCommands(CommandsProtocol):
 
         For more information see https://redis.io/commands/setbit
         """
-        value = value and 1 or 0
+        value = 1 if value else 0
         return self.execute_command("SETBIT", name, offset, value)
 
     def setex(self, name: KeyT, time: ExpiryT, value: EncodableT) -> ResponseT:
@@ -2906,7 +2900,7 @@ class ListCommands(CommandsProtocol):
         pieces: list[EncodableT] = [name]
         if by is not None:
             pieces.extend([b"BY", by])
-        if start is not None and num is not None:
+        if start is not None:
             pieces.extend([b"LIMIT", start, num])
         if get is not None:
             # If get is a string assume we want to get a single value.
@@ -3412,7 +3406,7 @@ class SetCommands(CommandsProtocol):
 
         For more information see https://redis.io/commands/spop
         """
-        args = (count is not None) and [count] or []
+        args = [count] if count is not None else []
         return self.execute_command("SPOP", name, *args)
 
     def srandmember(
@@ -3427,7 +3421,7 @@ class SetCommands(CommandsProtocol):
 
         For more information see https://redis.io/commands/srandmember
         """
-        args = (number is not None) and [number] or []
+        args = [number] if number is not None else []
         return self.execute_command("SRANDMEMBER", name, *args)
 
     def srem(self, name: str, *values: FieldT) -> Union[Awaitable[int], int]:
@@ -3527,7 +3521,7 @@ class StreamCommands(CommandsProtocol):
         if nomkstream:
             pieces.append(b"NOMKSTREAM")
         pieces.append(id)
-        if not isinstance(fields, dict) or len(fields) == 0:
+        if not isinstance(fields, dict) or not fields:
             raise DataError("XADD fields must be a non-empty dict")
         for pair in fields.items():
             pieces.extend(pair)
@@ -3562,7 +3556,7 @@ class StreamCommands(CommandsProtocol):
         For more information see https://redis.io/commands/xautoclaim
         """
         try:
-            if int(min_idle_time) < 0:
+            if min_idle_time < 0:
                 raise DataError(
                     "XAUTOCLAIM min_idle_time must be a nonnegative integer"
                 )
@@ -3630,9 +3624,13 @@ class StreamCommands(CommandsProtocol):
             )
 
         kwargs = {}
-        pieces: list[EncodableT] = [name, groupname, consumername, str(min_idle_time)]
-        pieces.extend(list(message_ids))
-
+        pieces: list[EncodableT] = [
+            name,
+            groupname,
+            consumername,
+            str(min_idle_time),
+            *list(message_ids),
+        ]
         if idle is not None:
             if not isinstance(idle, int):
                 raise DataError("XCLAIM idle must be an integer")
@@ -3851,7 +3849,7 @@ class StreamCommands(CommandsProtocol):
             pass
         # count
         try:
-            if int(count) < 0:
+            if count < 0:
                 raise DataError("XPENDING count must be a integer >= 0")
             pieces.extend([min, max, count])
         except TypeError:
@@ -3885,9 +3883,7 @@ class StreamCommands(CommandsProtocol):
         if count is not None:
             if not isinstance(count, int) or count < 1:
                 raise DataError("XRANGE count must be a positive integer")
-            pieces.append(b"COUNT")
-            pieces.append(str(count))
-
+            pieces.extend((b"COUNT", str(count)))
         return self.execute_command("XRANGE", name, *pieces)
 
     def xread(
@@ -3910,14 +3906,12 @@ class StreamCommands(CommandsProtocol):
         if block is not None:
             if not isinstance(block, int) or block < 0:
                 raise DataError("XREAD block must be a non-negative integer")
-            pieces.append(b"BLOCK")
-            pieces.append(str(block))
+            pieces.extend((b"BLOCK", str(block)))
         if count is not None:
             if not isinstance(count, int) or count < 1:
                 raise DataError("XREAD count must be a positive integer")
-            pieces.append(b"COUNT")
-            pieces.append(str(count))
-        if not isinstance(streams, dict) or len(streams) == 0:
+            pieces.extend((b"COUNT", str(count)))
+        if not isinstance(streams, dict) or not streams:
             raise DataError("XREAD streams must be a non empty dict")
         pieces.append(b"STREAMS")
         keys, values = zip(*streams.items())
@@ -3951,16 +3945,14 @@ class StreamCommands(CommandsProtocol):
         if count is not None:
             if not isinstance(count, int) or count < 1:
                 raise DataError("XREADGROUP count must be a positive integer")
-            pieces.append(b"COUNT")
-            pieces.append(str(count))
+            pieces.extend((b"COUNT", str(count)))
         if block is not None:
             if not isinstance(block, int) or block < 0:
                 raise DataError("XREADGROUP block must be a non-negative integer")
-            pieces.append(b"BLOCK")
-            pieces.append(str(block))
+            pieces.extend((b"BLOCK", str(block)))
         if noack:
             pieces.append(b"NOACK")
-        if not isinstance(streams, dict) or len(streams) == 0:
+        if not isinstance(streams, dict) or not streams:
             raise DataError("XREADGROUP streams must be a non empty dict")
         pieces.append(b"STREAMS")
         pieces.extend(streams.keys())
@@ -3990,9 +3982,7 @@ class StreamCommands(CommandsProtocol):
         if count is not None:
             if not isinstance(count, int) or count < 1:
                 raise DataError("XREVRANGE count must be a positive integer")
-            pieces.append(b"COUNT")
-            pieces.append(str(count))
-
+            pieces.extend((b"COUNT", str(count)))
         return self.execute_command("XREVRANGE", name, *pieces)
 
     def xtrim(
@@ -4033,9 +4023,7 @@ class StreamCommands(CommandsProtocol):
         if minid is not None:
             pieces.append(minid)
         if limit is not None:
-            pieces.append(b"LIMIT")
-            pieces.append(limit)
-
+            pieces.extend((b"LIMIT", limit))
         return self.execute_command("XTRIM", name, *pieces)
 
 
@@ -4122,8 +4110,7 @@ class SortedSetCommands(CommandsProtocol):
         if lt:
             pieces.append(b"LT")
         for pair in mapping.items():
-            pieces.append(pair[1])
-            pieces.append(pair[0])
+            pieces.extend((pair[1], pair[0]))
         return self.execute_command("ZADD", name, *pieces, **options)
 
     def zcard(self, name: KeyT) -> ResponseT:
@@ -4239,7 +4226,7 @@ class SortedSetCommands(CommandsProtocol):
 
         For more information see https://redis.io/commands/zpopmax
         """
-        args = (count is not None) and [count] or []
+        args = [count] if count is not None else []
         options = {"withscores": True}
         return self.execute_command("ZPOPMAX", name, *args, **options)
 
@@ -4250,7 +4237,7 @@ class SortedSetCommands(CommandsProtocol):
 
         For more information see https://redis.io/commands/zpopmin
         """
-        args = (count is not None) and [count] or []
+        args = [count] if count is not None else []
         options = {"withscores": True}
         return self.execute_command("ZPOPMIN", name, *args, **options)
 
@@ -4573,7 +4560,7 @@ class SortedSetCommands(CommandsProtocol):
         if (start is not None and num is None) or (num is not None and start is None):
             raise DataError("``start`` and ``num`` must both be specified")
         pieces = ["ZRANGEBYLEX", name, min, max]
-        if start is not None and num is not None:
+        if start is not None:
             pieces.extend([b"LIMIT", start, num])
         return self.execute_command(*pieces)
 
@@ -4597,7 +4584,7 @@ class SortedSetCommands(CommandsProtocol):
         if (start is not None and num is None) or (num is not None and start is None):
             raise DataError("``start`` and ``num`` must both be specified")
         pieces = ["ZREVRANGEBYLEX", name, max, min]
-        if start is not None and num is not None:
+        if start is not None:
             pieces.extend(["LIMIT", start, num])
         return self.execute_command(*pieces)
 
@@ -4628,7 +4615,7 @@ class SortedSetCommands(CommandsProtocol):
         if (start is not None and num is None) or (num is not None and start is None):
             raise DataError("``start`` and ``num`` must both be specified")
         pieces = ["ZRANGEBYSCORE", name, min, max]
-        if start is not None and num is not None:
+        if start is not None:
             pieces.extend(["LIMIT", start, num])
         if withscores:
             pieces.append("WITHSCORES")
@@ -4662,7 +4649,7 @@ class SortedSetCommands(CommandsProtocol):
         if (start is not None and num is None) or (num is not None and start is None):
             raise DataError("``start`` and ``num`` must both be specified")
         pieces = ["ZREVRANGEBYSCORE", name, max, min]
-        if start is not None and num is not None:
+        if start is not None:
             pieces.extend(["LIMIT", start, num])
         if withscores:
             pieces.append("WITHSCORES")
@@ -4823,8 +4810,7 @@ class SortedSetCommands(CommandsProtocol):
             pieces.extend(weights)
         if aggregate:
             if aggregate.upper() in ["SUM", "MIN", "MAX"]:
-                pieces.append(b"AGGREGATE")
-                pieces.append(aggregate)
+                pieces.extend((b"AGGREGATE", aggregate))
             else:
                 raise DataError("aggregate can be sum, min or max.")
         if options.get("withscores", False):
@@ -5283,10 +5269,7 @@ class ScriptCommands(CommandsProtocol):
                 "accepts SYNC/ASYNC. For older versions, "
                 "of redis leave as None."
             )
-        if sync_type is None:
-            pieces = []
-        else:
-            pieces = [sync_type]
+        pieces = [] if sync_type is None else [sync_type]
         return self.execute_command("SCRIPT FLUSH", *pieces)
 
     def script_kill(self) -> ResponseT:
@@ -5994,9 +5977,7 @@ class FunctionCommands:
         """
         from redis.client import NEVER_DECODE
 
-        options = {}
-        options[NEVER_DECODE] = []
-
+        options = {NEVER_DECODE: []}
         return self.execute_command("FUNCTION DUMP", **options)
 
     def function_restore(
@@ -6047,8 +6028,6 @@ class DataAccessCommands(
     A class containing all of the implemented data access redis commands.
     This class is to be used as a mixin for synchronous Redis clients.
     """
-
-
 class AsyncDataAccessCommands(
     AsyncBasicKeyCommands,
     AsyncHyperlogCommands,
@@ -6066,16 +6045,7 @@ class AsyncDataAccessCommands(
     """
 
 
-class CoreCommands(
-    ACLCommands,
-    ClusterCommands,
-    DataAccessCommands,
-    ManagementCommands,
-    ModuleCommands,
-    PubSubCommands,
-    ScriptCommands,
-    FunctionCommands,
-):
+class CoreCommands(ACLCommands, ClusterCommands, DataAccessCommands, ManagementCommands, ModuleCommands, PubSubCommands, ScriptCommands, AsyncFunctionCommands):
     """
     A class containing all of the implemented redis commands. This class is
     to be used as a mixin for synchronous Redis clients.

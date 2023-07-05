@@ -404,7 +404,7 @@ def test_tdigest_min_and_max(client):
 def test_tdigest_quantile(client):
     assert client.tdigest().create("tDigest", 500)
     # insert data-points into sketch
-    assert client.tdigest().add("tDigest", list([x * 0.01 for x in range(1, 10000)]))
+    assert client.tdigest().add("tDigest", [x * 0.01 for x in range(1, 10000)])
     # assert min min/max have same result as quantile 0 and 1
     res = client.tdigest().quantile("tDigest", 1.0)
     assert client.tdigest().max("tDigest") == res[0]

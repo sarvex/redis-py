@@ -65,14 +65,14 @@ class Path:
         edge_count = self.edge_count()
         for i in range(0, edge_count):
             node_id = self.get_node(i).id
-            res += "(" + str(node_id) + ")"
+            res += f"({str(node_id)})"
             edge = self.get_relationship(i)
             res += (
-                "-[" + str(int(edge.id)) + "]->"
+                f"-[{int(edge.id)}]->"
                 if edge.src_node == node_id
-                else "<-[" + str(int(edge.id)) + "]-"
+                else f"<-[{int(edge.id)}]-"
             )
         node_id = self.get_node(edge_count).id
-        res += "(" + str(node_id) + ")"
+        res += f"({str(node_id)})"
         res += ">"
         return res

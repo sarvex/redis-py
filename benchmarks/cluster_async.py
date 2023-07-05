@@ -109,10 +109,13 @@ async def incr(client, gather):
     if gather:
         for _ in range(count // 100):
             await asyncio.gather(
-                *(asyncio.create_task(client.incr("bench:incr")) for i in range(100))
+                *(
+                    asyncio.create_task(client.incr("bench:incr"))
+                    for _ in range(100)
+                )
             )
     else:
-        for i in range(count):
+        for _ in range(count):
             await client.incr("bench:incr")
 
 
@@ -123,11 +126,11 @@ async def lpush(client, gather, data):
             await asyncio.gather(
                 *(
                     asyncio.create_task(client.lpush("bench:lpush", data))
-                    for i in range(100)
+                    for _ in range(100)
                 )
             )
     else:
-        for i in range(count):
+        for _ in range(count):
             await client.lpush("bench:lpush", data)
 
 
@@ -151,10 +154,13 @@ async def lpop(client, gather):
     if gather:
         for _ in range(count // 100):
             await asyncio.gather(
-                *(asyncio.create_task(client.lpop("bench:lpush")) for i in range(100))
+                *(
+                    asyncio.create_task(client.lpop("bench:lpush"))
+                    for _ in range(100)
+                )
             )
     else:
-        for i in range(count):
+        for _ in range(count):
             await client.lpop("bench:lpush")
 
 

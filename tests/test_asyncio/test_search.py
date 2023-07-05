@@ -68,8 +68,7 @@ async def createIndex(modclient, num_docs=100, definition=None):
     bzfp = TextIOWrapper(bz2.BZ2File(WILL_PLAY_TEXT), encoding="utf8")
 
     r = csv.reader(bzfp, delimiter=";")
-    for n, line in enumerate(r):
-
+    for line in r:
         play, chapter, _, text = line[1], line[2], line[4], line[5]
 
         key = f"{play}:{chapter}".lower()
@@ -315,9 +314,9 @@ async def test_drop_index(modclient: redis.Redis):
     """
     Ensure the index gets dropped by data remains by default
     """
-    for x in range(20):
+    idx = "HaveIt"
+    for _ in range(20):
         for keep_docs in [[True, {}], [False, {"name": "haveit"}]]:
-            idx = "HaveIt"
             index = getClient(modclient)
             await index.hset("index:haveit", mapping={"name": "haveit"})
             idef = IndexDefinition(prefix=["index:"])

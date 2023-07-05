@@ -82,7 +82,7 @@ async def init_acl_user(r, username, password):
             await r.acl_setuser(
                 username,
                 enabled=True,
-                passwords=["+" + password],
+                passwords=[f"+{password}"],
                 keys="~*",
                 commands=[
                     "+ping",

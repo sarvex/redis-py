@@ -46,7 +46,7 @@ class BooleanOptionalAction(argparse.Action):
             _option_strings.append(option_string)
 
             if option_string.startswith("--"):
-                option_string = "--no-" + option_string[2:]
+                option_string = f"--no-{option_string[2:]}"
                 _option_strings.append(option_string)
 
         if help is not None and default is not None:
@@ -166,9 +166,7 @@ def pytest_sessionstart(session):
         cluster_nodes = session.config.getoption("--redis-cluster-nodes")
         wait_for_cluster_creation(redis_url, cluster_nodes)
 
-    use_uvloop = session.config.getoption("--uvloop")
-
-    if use_uvloop:
+    if use_uvloop := session.config.getoption("--uvloop"):
         try:
             import uvloop
 

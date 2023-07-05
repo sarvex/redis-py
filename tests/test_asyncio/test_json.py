@@ -279,8 +279,7 @@ async def test_objkeys(modclient: redis.Redis):
     await modclient.json().set("obj", Path.root_path(), obj)
     keys = await modclient.json().objkeys("obj", Path.root_path())
     keys.sort()
-    exp = list(obj.keys())
-    exp.sort()
+    exp = sorted(obj.keys())
     assert exp == keys
 
     await modclient.json().set("obj", Path.root_path(), obj)
@@ -907,7 +906,7 @@ def load_types_data(nested_key_name):
     jdata = {}
     types = []
     for i, (k, v) in zip(range(1, len(td) + 1), iter(td.items())):
-        jdata["nested" + str(i)] = {nested_key_name: v}
+        jdata[f"nested{str(i)}"] = {nested_key_name: v}
         types.append(k)
 
     return jdata, types

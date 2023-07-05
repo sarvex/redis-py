@@ -12,10 +12,7 @@ class StringJoiningConnection(Connection):
             self._sock.sendall(command)
         except OSError as e:
             self.disconnect()
-            if len(e.args) == 1:
-                _errno, errmsg = "UNKNOWN", e.args[0]
-            else:
-                _errno, errmsg = e.args
+            _errno, errmsg = ("UNKNOWN", e.args[0]) if len(e.args) == 1 else e.args
             raise ConnectionError(f"Error {_errno} while writing to socket. {errmsg}.")
         except Exception:
             self.disconnect()
@@ -31,10 +28,9 @@ class StringJoiningConnection(Connection):
                 for k in map(self.encoder.encode, args)
             ]
         )
-        output = SYM_EMPTY.join(
+        return SYM_EMPTY.join(
             (SYM_STAR, str(len(args)).encode(), SYM_CRLF, args_output)
         )
-        return output
 
 
 class ListJoiningConnection(Connection):
@@ -48,10 +44,7 @@ class ListJoiningConnection(Connection):
                 self._sock.sendall(item)
         except OSError as e:
             self.disconnect()
-            if len(e.args) == 1:
-                _errno, errmsg = "UNKNOWN", e.args[0]
-            else:
-                _errno, errmsg = e.args
+            _errno, errmsg = ("UNKNOWN", e.args[0]) if len(e.args) == 1 else e.args
             raise ConnectionError(f"Error {_errno} while writing to socket. {errmsg}.")
         except Exception:
             self.disconnect()
@@ -66,8 +59,7 @@ class ListJoiningConnection(Connection):
                 buff = SYM_EMPTY.join(
                     (buff, SYM_DOLLAR, str(len(k)).encode(), SYM_CRLF)
                 )
-                output.append(buff)
-                output.append(k)
+                output.extend((buff, k))
                 buff = SYM_CRLF
             else:
                 buff = SYM_EMPTY.join(

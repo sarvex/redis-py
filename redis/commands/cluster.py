@@ -465,17 +465,16 @@ class ClusterManagementCommands(ManagementCommands):
 
         For more information see https://redis.io/commands/cluster-failover
         """
-        if option:
-            if option.upper() not in ["FORCE", "TAKEOVER"]:
-                raise RedisError(
-                    f"Invalid option for CLUSTER FAILOVER command: {option}"
-                )
-            else:
-                return self.execute_command(
-                    "CLUSTER FAILOVER", option, target_nodes=target_node
-                )
-        else:
+        if not option:
             return self.execute_command("CLUSTER FAILOVER", target_nodes=target_node)
+        if option.upper() not in ["FORCE", "TAKEOVER"]:
+            raise RedisError(
+                f"Invalid option for CLUSTER FAILOVER command: {option}"
+            )
+        else:
+            return self.execute_command(
+                "CLUSTER FAILOVER", option, target_nodes=target_node
+            )
 
     def cluster_info(self, target_nodes: Optional["TargetNodesT"] = None) -> ResponseT:
         """
@@ -586,7 +585,7 @@ class ClusterManagementCommands(ManagementCommands):
 
         For more information see https://redis.io/commands/cluster-setslot
         """
-        if state.upper() in ("IMPORTING", "NODE", "MIGRATING"):
+        if state.upper() in {"IMPORTING", "NODE", "MIGRATING"}:
             return self.execute_command(
                 "CLUSTER SETSLOT", slot_id, state, node_id, target_nodes=target_node
             )
@@ -671,7 +670,7 @@ class ClusterManagementCommands(ManagementCommands):
 
         For more information see https://redis.io/commands/readonly
         """
-        if target_nodes == "replicas" or target_nodes == "all":
+        if target_nodes in ["replicas", "all"]:
             # read_from_replicas will only be enabled if the READONLY command
             # is sent to all replicas
             self.read_from_replicas = True
@@ -759,7 +758,7 @@ class ClusterDataAccessCommands(DataAccessCommands):
         target_nodes = kwargs.pop("target_nodes", None)
         if specific_argument == "strings" and target_nodes is None:
             target_nodes = "default-node"
-        kwargs.update({"target_nodes": target_nodes})
+        kwargs["target_nodes"] = target_nodes
         return super().stralgo(
             algo,
             value1,
@@ -783,10 +782,11 @@ class ClusterDataAccessCommands(DataAccessCommands):
         cursors, data = self.scan(match=match, count=count, _type=_type, **kwargs)
         yield from data
 
-        cursors = {name: cursor for name, cursor in cursors.items() if cursor != 0}
-        if cursors:
+        if cursors := {
+            name: cursor for name, cursor in cursors.items() if cursor != 0
+        }:
             # Get nodes by name
-            nodes = {name: self.get_node(node_name=name) for name in cursors.keys()}
+            nodes = {name: self.get_node(node_name=name) for name in cursors}
 
             # Iterate over each node till its cursor is 0
             kwargs.pop("target_nodes", None)
@@ -830,10 +830,11 @@ class AsyncClusterDataAccessCommands(
         for value in data:
             yield value
 
-        cursors = {name: cursor for name, cursor in cursors.items() if cursor != 0}
-        if cursors:
+        if cursors := {
+            name: cursor for name, cursor in cursors.items() if cursor != 0
+        }:
             # Get nodes by name
-            nodes = {name: self.get_node(node_name=name) for name in cursors.keys()}
+            nodes = {name: self.get_node(node_name=name) for name in cursors}
 
             # Iterate over each node till its cursor is 0
             kwargs.pop("target_nodes", None)

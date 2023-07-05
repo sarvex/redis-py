@@ -307,7 +307,7 @@ class PythonParser(BaseParser):
         else:
             raise InvalidResponse(f"Protocol Error: {raw!r}")
 
-        if disable_decoding is False:
+        if not disable_decoding:
             response = self.encoder.decode(response)
         return response
 
@@ -426,10 +426,7 @@ class HiredisParser(BaseParser):
 
 
 DefaultParser: Type[Union[PythonParser, HiredisParser]]
-if HIREDIS_AVAILABLE:
-    DefaultParser = HiredisParser
-else:
-    DefaultParser = PythonParser
+DefaultParser = HiredisParser if HIREDIS_AVAILABLE else PythonParser
 
 
 class ConnectCallbackProtocol(Protocol):
@@ -522,12 +519,13 @@ class AbstractConnection:
             retry_on_error.append(socket.timeout)
             retry_on_error.append(asyncio.TimeoutError)
         self.retry_on_error = retry_on_error
-        if retry or retry_on_error:
-            if not retry:
-                self.retry = Retry(NoBackoff(), 1)
-            else:
-                # deep-copy the Retry object as it is mutable
-                self.retry = copy.deepcopy(retry)
+        if retry:
+            # deep-copy the Retry object as it is mutable
+            self.retry = copy.deepcopy(retry)
+            # Update the retry's supported errors with the specified errors
+            self.retry.update_supported_errors(retry_on_error)
+        elif retry_on_error:
+            self.retry = Retry(NoBackoff(), 1)
             # Update the retry's supported errors with the specified errors
             self.retry.update_supported_errors(retry_on_error)
         else:
@@ -839,8 +837,7 @@ class AbstractConnection:
                 buff = SYM_EMPTY.join(
                     (buff, SYM_DOLLAR, str(arg_length).encode(), SYM_CRLF)
                 )
-                output.append(buff)
-                output.append(arg)
+                output.extend((buff, arg))
                 buff = SYM_CRLF
             else:
                 buff = SYM_EMPTY.join(
@@ -924,8 +921,7 @@ class Connection(AbstractConnection):
             )
         self._reader = reader
         self._writer = writer
-        sock = writer.transport.get_extra_info("socket")
-        if sock:
+        if sock := writer.transport.get_extra_info("socket"):
             sock.setsockopt(socket.IPPROTO_TCP, socket.TCP_NODELAY, 1)
             try:
                 # TCP_KEEPALIVE
@@ -1154,8 +1150,7 @@ def parse_url(url: str) -> ConnectKwargs:
     for name, value_list in parse_qs(parsed.query).items():
         if value_list and len(value_list) > 0:
             value = unquote(value_list[0])
-            parser = URL_QUERY_ARGUMENT_PARSERS.get(name)
-            if parser:
+            if parser := URL_QUERY_ARGUMENT_PARSERS.get(name):
                 try:
                     kwargs[name] = parser(value)
                 except (TypeError, ValueError):
@@ -1257,7 +1252,7 @@ class ConnectionPool:
         arguments always win.
         """
         url_options = parse_url(url)
-        kwargs.update(url_options)
+        kwargs |= url_options
         return cls(**kwargs)
 
     def __init__(
@@ -1453,8 +1448,9 @@ class ConnectionPool:
                 *(connection.disconnect() for connection in connections),
                 return_exceptions=True,
             )
-            exc = next((r for r in resp if isinstance(r, BaseException)), None)
-            if exc:
+            if exc := next(
+                (r for r in resp if isinstance(r, BaseException)), None
+            ):
                 raise exc
 
     def set_retry(self, retry: "Retry") -> None:
@@ -1628,6 +1624,7 @@ class BlockingConnectionPool(ConnectionPool):
                 *(connection.disconnect() for connection in self._connections),
                 return_exceptions=True,
             )
-            exc = next((r for r in resp if isinstance(r, BaseException)), None)
-            if exc:
+            if exc := next(
+                (r for r in resp if isinstance(r, BaseException)), None
+            ):
                 raise exc

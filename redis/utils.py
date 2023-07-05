@@ -58,7 +58,7 @@ def dict_merge(*dicts: Mapping[str, Any]) -> Dict[str, Any]:
     merged = {}
 
     for d in dicts:
-        merged.update(d)
+        merged |= d
 
     return merged
 

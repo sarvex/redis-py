@@ -139,23 +139,19 @@ class QueryResult:
         """
         Parse the header of the result.
         """
-        # An array of column name/column type pairs.
-        header = raw_result_set[0]
-        return header
+        return raw_result_set[0]
 
     def parse_records(self, raw_result_set):
         """
         Parses the result set and returns a list of records.
         """
-        records = [
+        return [
             [
                 self.parse_record_types[self.header[idx][0]](cell)
                 for idx, cell in enumerate(row)
             ]
             for row in raw_result_set[1]
         ]
-
-        return records
 
     def parse_entity_properties(self, props):
         """
@@ -192,9 +188,7 @@ class QueryResult:
         node_id = int(cell[0])
         labels = None
         if len(cell[1]) > 0:
-            labels = []
-            for inner_label in cell[1]:
-                labels.append(self.graph.get_label(inner_label))
+            labels = [self.graph.get_label(inner_label) for inner_label in cell[1]]
         properties = self.parse_entity_properties(cell[2])
         return Node(node_id=node_id, label=labels, properties=properties)
 
@@ -245,12 +239,7 @@ class QueryResult:
         """
         Parse the cell to point.
         """
-        p = {}
-        # A point is received an array of the form: [latitude, longitude]
-        # It is returned as a map of the form: {"latitude": latitude, "longitude": longitude} # noqa
-        p["latitude"] = float(cell[0])
-        p["longitude"] = float(cell[1])
-        return p
+        return {"latitude": float(cell[0]), "longitude": float(cell[1])}
 
     def parse_null(self, cell):
         """
@@ -270,7 +259,7 @@ class QueryResult:
         """
         value = value.decode() if isinstance(value, bytes) else value
         try:
-            scalar = True if strtobool(value) else False
+            scalar = bool(strtobool(value))
         except ValueError:
             sys.stderr.write("unknown boolean type\n")
             scalar = None
@@ -286,8 +275,7 @@ class QueryResult:
         """
         Parse an array of values.
         """
-        scalar = [self.parse_scalar(value[i]) for i in range(len(value))]
-        return scalar
+        return [self.parse_scalar(value[i]) for i in range(len(value))]
 
     def parse_unknown(self, cell):
         """
@@ -302,23 +290,24 @@ class QueryResult:
         """
         scalar_type = int(cell[0])
         value = cell[1]
-        scalar = self.parse_scalar_types[scalar_type](value)
-
-        return scalar
+        return self.parse_scalar_types[scalar_type](value)
 
     def parse_profile(self, response):
-        self.result_set = [x[0 : x.index(",")].strip() for x in response]
+        self.result_set = [x[:x.index(",")].strip() for x in response]
 
     def is_empty(self):
         return len(self.result_set) == 0
 
     @staticmethod
     def _get_value(prop, statistics):
-        for stat in statistics:
-            if prop in stat:
-                return float(stat.split(": ")[1].split(" ")[0])
-
-        return None
+        return next(
+            (
+                float(stat.split(": ")[1].split(" ")[0])
+                for stat in statistics
+                if prop in stat
+            ),
+            None,
+        )
 
     def _get_stat(self, stat):
         return self.statistics[stat] if stat in self.statistics else 0
@@ -569,5 +558,4 @@ class AsyncQueryResult(QueryResult):
         """
         Parse array value.
         """
-        scalar = [await self.parse_scalar(value[i]) for i in range(len(value))]
-        return scalar
+        return [await self.parse_scalar(value[i]) for i in range(len(value))]

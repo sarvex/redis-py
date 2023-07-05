@@ -74,9 +74,7 @@ class Value:
         """
         Convert an object to a value, if it is not a value already
         """
-        if isinstance(v, Value):
-            return v
-        return ScalarValue(v)
+        return v if isinstance(v, Value) else ScalarValue(v)
 
     def to_string(self):
         raise NotImplementedError()
@@ -207,9 +205,7 @@ class Node:
 
     @classmethod
     def to_node(cls, obj):  # noqa
-        if isinstance(obj, Node):
-            return obj
-        return BaseNode(obj)
+        return obj if isinstance(obj, Node) else BaseNode(obj)
 
     @property
     def JOINSTR(self):
@@ -221,9 +217,7 @@ class Node:
         return f"{pre}{self.JOINSTR.join(n.to_string() for n in self.params)}{post}"
 
     def _should_use_paren(self, optval):
-        if optval is not None:
-            return optval
-        return len(self.params) > 1
+        return optval if optval is not None else len(self.params) > 1
 
     def __str__(self):
         return self.to_string()
@@ -265,10 +259,7 @@ class DisjunctNode(IntersectNode):
     def to_string(self, with_parens=None):
         with_parens = self._should_use_paren(with_parens)
         ret = super().to_string(with_parens=False)
-        if with_parens:
-            return "(-" + ret + ")"
-        else:
-            return "-" + ret
+        return f"(-{ret})" if with_parens else f"-{ret}"
 
 
 class DistjunctUnion(DisjunctNode):
@@ -291,10 +282,7 @@ class OptionalNode(IntersectNode):
     def to_string(self, with_parens=None):
         with_parens = self._should_use_paren(with_parens)
         ret = super().to_string(with_parens=False)
-        if with_parens:
-            return "(~" + ret + ")"
-        else:
-            return "~" + ret
+        return f"(~{ret})" if with_parens else f"~{ret}"
 
 
 def intersect(*args, **kwargs):

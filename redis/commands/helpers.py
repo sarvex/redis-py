@@ -12,10 +12,7 @@ def list_or_args(keys: KeysT, args: Tuple[KeyT, ...]) -> List[KeyT]:
         iter(keys)
         # a string or bytes instance can be iterated, but indicates
         # keys wasn't passed as a list
-        if isinstance(keys, (bytes, str)):
-            keys = [keys]
-        else:
-            keys = list(keys)
+        keys = [keys] if isinstance(keys, (bytes, str)) else list(keys)
     except TypeError:
         keys = [keys]
     if args:
@@ -33,9 +30,7 @@ def nativestr(x):
 
 def delist(x):
     """Given a list of binaries, return the stringified version."""
-    if x is None:
-        return x
-    return [nativestr(obj) for obj in x]
+    return x if x is None else [nativestr(obj) for obj in x]
 
 
 def parse_to_list(response):
@@ -96,9 +91,7 @@ def random_string(length=10):
     """
     Returns a random N character long string.
     """
-    return "".join(  # nosec
-        random.choice(string.ascii_lowercase) for x in range(length)
-    )
+    return "".join(random.choice(string.ascii_lowercase) for _ in range(length))
 
 
 def quote_string(v):

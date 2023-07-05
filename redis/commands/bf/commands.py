@@ -144,8 +144,7 @@ class BFCommands:
             raise ModuleError("This command cannot be used when hiredis is available.")
 
         params = [key, iter]
-        options = {}
-        options[NEVER_DECODE] = []
+        options = {NEVER_DECODE: []}
         return self.execute_command(BF_SCANDUMP, *params, **options)
 
     def loadchunk(self, key, iter, data):

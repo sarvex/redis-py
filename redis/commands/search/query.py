@@ -25,7 +25,7 @@ class Query:
         self._with_payloads = False
         self._with_scores = False
         self._scorer = False
-        self._filters = list()
+        self._filters = []
         self._ids = None
         self._slop = -1
         self._timeout = None
@@ -84,8 +84,7 @@ class Query:
         - **sep** Separator string to separate fragments
         """
         args = ["SUMMARIZE"]
-        fields = self._mk_field_list(fields)
-        if fields:
+        if fields := self._mk_field_list(fields):
             args += ["FIELDS", str(len(fields))] + fields
 
         if context_len is not None:
@@ -107,8 +106,7 @@ class Query:
         - **tags** A list of two strings to surround the match.
         """
         args = ["HIGHLIGHT"]
-        fields = self._mk_field_list(fields)
-        if fields:
+        if fields := self._mk_field_list(fields):
             args += ["FIELDS", str(len(fields))] + fields
         if tags:
             args += ["TAGS"] + list(tags)
@@ -170,8 +168,7 @@ class Query:
         if self._no_content:
             args.append("NOCONTENT")
         if self._fields:
-            args.append("INFIELDS")
-            args.append(len(self._fields))
+            args.extend(("INFIELDS", len(self._fields)))
             args += self._fields
         if self._verbatim:
             args.append("VERBATIM")

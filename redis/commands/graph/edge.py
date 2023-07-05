@@ -26,7 +26,7 @@ class Edge:
         res = ""
         if self.properties:
             props = ",".join(
-                key + ":" + str(quote_string(val))
+                f"{key}:{str(quote_string(val))}"
                 for key, val in sorted(self.properties.items())
             )
             res += "{" + props + "}"
@@ -34,30 +34,19 @@ class Edge:
         return res
 
     def __str__(self):
-        # Source node.
-        if isinstance(self.src_node, Node):
-            res = str(self.src_node)
-        else:
-            res = "()"
-
-        # Edge
-        res += "-["
+        res = (str(self.src_node) if isinstance(self.src_node, Node) else "()") + "-["
         if self.relation:
-            res += ":" + self.relation
+            res += f":{self.relation}"
         if self.properties:
             props = ",".join(
-                key + ":" + str(quote_string(val))
+                f"{key}:{str(quote_string(val))}"
                 for key, val in sorted(self.properties.items())
             )
             res += "{" + props + "}"
         res += "]->"
 
         # Dest node.
-        if isinstance(self.dest_node, Node):
-            res += str(self.dest_node)
-        else:
-            res += "()"
-
+        res += str(self.dest_node) if isinstance(self.dest_node, Node) else "()"
         return res
 
     def __eq__(self, rhs):
@@ -85,7 +74,4 @@ class Edge:
             return False
 
         # Compare properties.
-        if self.properties != rhs.properties:
-            return False
-
-        return True
+        return self.properties == rhs.properties

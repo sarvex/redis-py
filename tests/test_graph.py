@@ -268,7 +268,7 @@ def test_cached_execution(client):
     assert uncached_result.cached_execution is False
 
     # loop to make sure the query is cached on each thread on server
-    for x in range(0, 64):
+    for _ in range(0, 64):
         cached_result = client.graph().query(
             "MATCH (n) RETURN n, $param", {"param": [0]}
         )
@@ -299,11 +299,8 @@ def test_query_timeout(client):
     # Issue a long-running query with a 1-millisecond timeout.
     with pytest.raises(ResponseError):
         client.graph().query("MATCH (a), (b), (c), (d) RETURN *", timeout=1)
-        assert False is False
-
     with pytest.raises(Exception):
         client.graph().query("RETURN 1", timeout="str")
-        assert False is False
 
 
 @pytest.mark.redismod
@@ -312,7 +309,6 @@ def test_read_only_query(client):
         # Issue a write query, specifying read-only true,
         # this call should fail.
         client.graph().query("CREATE (p:person {name:'a'})", read_only=True)
-        assert False is False
 
 
 @pytest.mark.redismod
@@ -414,75 +410,7 @@ def test_multi_label(client):
 
 @pytest.mark.redismod
 def test_cache_sync(client):
-    pass
     return
-    # This test verifies that client internal graph schema cache stays
-    # in sync with the graph schema
-    #
-    # Client B will try to get Client A out of sync by:
-    # 1. deleting the graph
-    # 2. reconstructing the graph in a different order, this will casuse
-    #    a differance in the current mapping between string IDs and the
-    #    mapping Client A is aware of
-    #
-    # Client A should pick up on the changes by comparing graph versions
-    # and resyncing its cache.
-
-    A = client.graph("cache-sync")
-    B = client.graph("cache-sync")
-
-    # Build order:
-    # 1. introduce label 'L' and 'K'
-    # 2. introduce attribute 'x' and 'q'
-    # 3. introduce relationship-type 'R' and 'S'
-
-    A.query("CREATE (:L)")
-    B.query("CREATE (:K)")
-    A.query("MATCH (n) SET n.x = 1")
-    B.query("MATCH (n) SET n.q = 1")
-    A.query("MATCH (n) CREATE (n)-[:R]->()")
-    B.query("MATCH (n) CREATE (n)-[:S]->()")
-
-    # Cause client A to populate its cache
-    A.query("MATCH (n)-[e]->() RETURN n, e")
-
-    assert len(A._labels) == 2
-    assert len(A._properties) == 2
-    assert len(A._relationship_types) == 2
-    assert A._labels[0] == "L"
-    assert A._labels[1] == "K"
-    assert A._properties[0] == "x"
-    assert A._properties[1] == "q"
-    assert A._relationship_types[0] == "R"
-    assert A._relationship_types[1] == "S"
-
-    # Have client B reconstruct the graph in a different order.
-    B.delete()
-
-    # Build order:
-    # 1. introduce relationship-type 'R'
-    # 2. introduce label 'L'
-    # 3. introduce attribute 'x'
-    B.query("CREATE ()-[:S]->()")
-    B.query("CREATE ()-[:R]->()")
-    B.query("CREATE (:K)")
-    B.query("CREATE (:L)")
-    B.query("MATCH (n) SET n.q = 1")
-    B.query("MATCH (n) SET n.x = 1")
-
-    # A's internal cached mapping is now out of sync
-    # issue a query and make sure A's cache is synced.
-    A.query("MATCH (n)-[e]->() RETURN n, e")
-
-    assert len(A._labels) == 2
-    assert len(A._properties) == 2
-    assert len(A._relationship_types) == 2
-    assert A._labels[0] == "K"
-    assert A._labels[1] == "L"
-    assert A._properties[0] == "q"
-    assert A._properties[1] == "x"
-    assert A._relationship_types[0] == "S"
-    assert A._relationship_types[1] == "R"
 
 
 @pytest.mark.redismod
