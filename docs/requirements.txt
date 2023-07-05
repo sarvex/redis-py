@@ -1,5 +1,5 @@
 sphinx>=5.0,<7.0
-docutils<0.18
+docutils<0.21
 nbsphinx
 sphinx_gallery
 ipython
