@@ -55,6 +55,6 @@ setup(
     ],
     extras_require={
         "hiredis": ["hiredis>=1.0.0"],
-        "ocsp": ["cryptography>=36.0.1", "pyopenssl==20.0.1", "requests>=2.26.0"],
+        "ocsp": ["cryptography>=36.0.1", "pyopenssl==24.0.0", "requests>=2.26.0"],
     },
 )
